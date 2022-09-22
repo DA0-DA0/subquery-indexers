@@ -12,7 +12,7 @@
     "publish": "subql publish",
     "deploy:production": "subql deployment:deploy -d --org=NoahSaso --projectName=dao-dao-v2-inbox"
   },
-  "homepage": "https://github.com/DA0-DA0/subquery-indexers/blob/main/v2-inbox",
+  "homepage": "https://github.com/DA0-DA0/subquery-indexers/tree/main/v2-inbox",
   "repository": "https://github.com/DA0-DA0/subquery-indexers",
   "files": [
     "dist",
