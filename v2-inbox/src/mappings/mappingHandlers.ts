@@ -12,7 +12,7 @@ interface DecodedMsg<T extends any = any> {
   }[];
 }
 
-const getProposalModule = async (address: string) => {
+const ensureProposalModuleExists = async (address: string) => {
   let proposalModule = await ProposalModule.get(address);
   if (!proposalModule) {
     proposalModule = ProposalModule.create({
@@ -20,7 +20,6 @@ const getProposalModule = async (address: string) => {
     });
     await proposalModule.save();
   }
-  return proposalModule;
 };
 
 const getProposal = async (
@@ -31,6 +30,9 @@ const getProposal = async (
   const id = `${proposalModuleAddress}:${proposalId}`;
   let proposal = await Proposal.get(id);
   if (!proposal && open) {
+    // Make proposal module if necessary.
+    await ensureProposalModuleExists(proposalModuleAddress);
+
     proposal = Proposal.create({
       id,
       moduleId: proposalModuleAddress,
@@ -62,7 +64,7 @@ export async function handlePropose(
   } = cosmosMessage.msg.decodedMsg;
 
   // cw-proposal-single and cw-proposal-multiple supported
-  if (!('title' in propose) && !('description' in propose)) {
+  if (!("title" in propose) && !("description" in propose)) {
     return;
   }
 
@@ -77,8 +79,7 @@ export async function handlePropose(
     return;
   }
 
-  // Make proposal module and proposal if necessary.
-  await getProposalModule(contract);
+  // Make proposal (creates module as well).
   await getProposal(contract, proposalNumber);
 
   logger.info(`----- ${contract} > ${proposalNumber} ==> Proposed`);
@@ -102,11 +103,7 @@ export async function handleVote(
   const proposalNumber = Number(vote.proposal_id);
 
   const wallet = await getWallet(sender);
-  const proposal = await getProposal(
-    contract,
-    proposalNumber,
-    true,
-  );
+  const proposal = await getProposal(contract, proposalNumber, true);
 
   // Create and save wallet voted on proposal object.
   await (
