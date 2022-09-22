@@ -1,0 +1,7 @@
+type Balance @entity {
+  id: ID! # 'ADDR:CONTRACT'
+  addr: String! @index
+  contract: String! @index
+  blockHeight: BigInt!
+  amount: BigInt!
+}
