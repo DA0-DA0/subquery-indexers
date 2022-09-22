@@ -105,12 +105,13 @@ export async function handleVote(
   const wallet = await getWallet(sender);
   const proposal = await getProposal(contract, proposalNumber, true);
 
-  // Create and save wallet voted on proposal object.
+  // Create and save wallet voted proposal object with timestamp.
   await (
     await ProposalVote.create({
       id: `${contract}:${proposalNumber}:${sender}`,
       walletId: wallet.id,
       proposalId: proposal.id,
+      votedAt: cosmosMessage.block.block.header.time
     })
   ).save();
 

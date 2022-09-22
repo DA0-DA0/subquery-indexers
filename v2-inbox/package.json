@@ -8,7 +8,9 @@
     "prepack": "rm -rf dist && npm build",
     "test": "jest",
     "codegen": "subql codegen && replace-in-files --string '@subql/types' --replacement '@subql/types-cosmos' src/types/models/*",
-    "start:docker": "docker-compose pull && docker-compose up --remove-orphans"
+    "start:docker": "docker-compose pull && docker-compose up --remove-orphans",
+    "publish": "subql publish",
+    "deploy:production": "subql deployment:deploy -d --org=NoahSaso --projectName=dao-dao-v2-inbox"
   },
   "homepage": "https://github.com/DA0-DA0/subquery-indexers/blob/main/v2-inbox",
   "repository": "https://github.com/DA0-DA0/subquery-indexers",
