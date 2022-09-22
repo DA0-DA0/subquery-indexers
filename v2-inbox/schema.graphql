@@ -1,0 +1,26 @@
+# To improve query performance, we strongly suggest adding indexes to any field that you plan to filter or sort by
+# Add the `@index` or `@index(unique: true)` annotation after any non-key field
+# https://academy.subquery.network/build/graphql.html#indexing-by-non-primary-key-field
+
+type ProposalModule @entity {
+  id: ID!
+  proposals: [Proposal] @derivedFrom(field: "module")
+}
+
+type Proposal @entity {
+  id: ID!
+  module: ProposalModule!
+  num: Int!
+  open: Boolean!
+  votes: [ProposalVote] @derivedFrom(field: "proposal")
+}
+
+type Wallet @entity {
+  id: ID!
+}
+
+type ProposalVote @entity {
+  id: ID!
+  proposal: Proposal!
+  wallet: Wallet!
+}
