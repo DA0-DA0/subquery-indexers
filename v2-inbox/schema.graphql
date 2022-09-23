@@ -12,6 +12,8 @@ type Proposal @entity {
   module: ProposalModule!
   num: Int!
   open: Boolean!
+  expiresAtDate: Date @index
+  expiresAtHeight: Int @index
   votes: [ProposalVote] @derivedFrom(field: "proposal")
 }
 
@@ -23,5 +25,5 @@ type ProposalVote @entity {
   id: ID!
   proposal: Proposal!
   wallet: Wallet!
-  votedAt: String!
+  votedAt: Date!
 }

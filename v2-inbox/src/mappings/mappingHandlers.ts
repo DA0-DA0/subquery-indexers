@@ -12,6 +12,18 @@ interface DecodedMsg<T extends any = any> {
   }[];
 }
 
+type Expiration =
+  | {
+      at_height: number;
+    }
+  | {
+      // Nanoseconds
+      at_time: number;
+    }
+  | {
+      never: {};
+    };
+
 const ensureProposalModuleExists = async (address: string) => {
   let proposalModule = await ProposalModule.get(address);
   if (!proposalModule) {
@@ -22,25 +34,76 @@ const ensureProposalModuleExists = async (address: string) => {
   }
 };
 
-const getProposal = async (
+const updateOrCreateAndGetProposal = async (
   proposalModuleAddress: string,
-  proposalId: number,
-  open = false
+  proposalNumber: number,
+  // Automatically update accordingly.
+  shouldBeOpen: boolean,
+  // Whether or not to create a new proposal if it does not already exist.
+  createNew: boolean
 ): Promise<Proposal | undefined> => {
-  const id = `${proposalModuleAddress}:${proposalId}`;
+  const id = `${proposalModuleAddress}:${proposalNumber}`;
   let proposal = await Proposal.get(id);
-  if (!proposal && open) {
+
+  // Create proposal if does not exist.
+  if (!proposal && createNew) {
     // Make proposal module if necessary.
     await ensureProposalModuleExists(proposalModuleAddress);
+
+    // Get proposal expiration.
+    let expiresAtDate: Date | undefined;
+    let expiresAtHeight: number | undefined;
+    try {
+      const response = await api.queryContractSmart(proposalModuleAddress, {
+        proposal: { proposal_id: proposalNumber },
+      });
+      // cw-proposal-single and cw-proposal-multiple supported
+      if (
+        !response ||
+        !("proposal" in response) ||
+        !response.proposal ||
+        !("expiration" in response.proposal) ||
+        !response.proposal.expiration
+      ) {
+        throw new Error(
+          `Invalid proposal response: ${JSON.stringify(response)}`
+        );
+      }
+
+      const expiration = response.proposal.expiration as Expiration;
+      expiresAtDate =
+        "at_time" in expiration
+          ? // Timestamp is in nanoseconds, convert to microseconds.
+            new Date(Number(expiration.at_time) / 1e6)
+          : undefined;
+      expiresAtHeight =
+        "at_height" in expiration ? expiration.at_height : undefined;
+    } catch (err) {
+      logger.error(
+        `Error retrieving expiration for ${id}: ${
+          err instanceof Error ? err.message : `${err}`
+        }`
+      );
+      return;
+    }
 
     proposal = Proposal.create({
       id,
       moduleId: proposalModuleAddress,
-      num: proposalId,
-      open: true,
+      num: proposalNumber,
+      open: shouldBeOpen,
+      expiresAtDate,
+      expiresAtHeight,
     });
     await proposal.save();
   }
+
+  // Update proposal open status if necessary.
+  if (proposal && proposal.open !== shouldBeOpen) {
+    proposal.open = shouldBeOpen;
+    await proposal.save();
+  }
+
   return proposal;
 };
 
@@ -75,12 +138,16 @@ export async function handlePropose(
         .value
     );
   } catch (err) {
-    console.error(err);
+    logger.error(
+      `Error retrieving proposalNumber for ${contract}: ${
+        err instanceof Error ? err.message : `${err}`
+      }`
+    );
     return;
   }
 
   // Make proposal (creates module as well).
-  await getProposal(contract, proposalNumber);
+  await updateOrCreateAndGetProposal(contract, proposalNumber, true, true);
 
   logger.info(`----- ${contract} > ${proposalNumber} ==> Proposed`);
 }
@@ -100,10 +167,33 @@ export async function handleVote(
     return;
   }
 
+  const blockDate = new Date(cosmosMessage.block.block.header.time);
   const proposalNumber = Number(vote.proposal_id);
 
+  let proposalOpen: boolean;
+  try {
+    proposalOpen =
+      findAttribute(JSON.parse(cosmosMessage.tx.tx.log), "wasm", "status")
+        .value === "open";
+  } catch (err) {
+    logger.error(
+      `Error retrieving status for ${contract} > ${proposalNumber}: ${
+        err instanceof Error ? err.message : `${err}`
+      }`
+    );
+    return;
+  }
+
   const wallet = await getWallet(sender);
-  const proposal = await getProposal(contract, proposalNumber, true);
+  const proposal = await updateOrCreateAndGetProposal(
+    contract,
+    proposalNumber,
+    proposalOpen,
+    true
+  );
+  if (!proposal) {
+    return;
+  }
 
   // Create and save wallet voted proposal object with timestamp.
   await (
@@ -111,11 +201,11 @@ export async function handleVote(
       id: `${contract}:${proposalNumber}:${sender}`,
       walletId: wallet.id,
       proposalId: proposal.id,
-      votedAt: cosmosMessage.block.block.header.time
+      votedAt: blockDate,
     })
   ).save();
 
-  logger.info(`----- ${contract} > ${proposalNumber} > ${sender} ==> Voted`);
+  logger.info(`----- ${contract} > ${proposalNumber} > ${sender} ==> Voted (open: ${proposalOpen})`);
 }
 
 export async function handleExecute(
@@ -134,13 +224,8 @@ export async function handleExecute(
 
   const proposalNumber = Number(execute.proposal_id);
 
-  const proposal = await getProposal(contract, proposalNumber);
-  if (!proposal) {
-    return;
-  }
-
-  proposal.open = false;
-  await proposal.save();
+  // Update to not open.
+  await updateOrCreateAndGetProposal(contract, proposalNumber, false, false);
 
   logger.info(`----- ${contract} > ${proposalNumber} ==> Executed`);
 }
@@ -161,13 +246,8 @@ export async function handleClose(
 
   const proposalNumber = Number(close.proposal_id);
 
-  const proposal = await getProposal(contract, proposalNumber);
-  if (!proposal) {
-    return;
-  }
-
-  proposal.open = false;
-  await proposal.save();
+  // Update to not open.
+  await updateOrCreateAndGetProposal(contract, proposalNumber, false, false);
 
   logger.info(`----- ${contract} > ${proposalNumber} ==> Closed`);
 }
