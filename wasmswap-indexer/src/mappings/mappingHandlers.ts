@@ -94,7 +94,9 @@ async function handleSwapEvent(
       inputToken === "Token2" ? BigInt(inputAmount) : -BigInt(outputAmount);
   }
   await wasmswap.save();
-  logger.info("processed swap");
+  logger.info(
+    "processed swap ${wasmswap.token1Amount} ${wasmswap.token2Amount}"
+  );
 
   // const blockHeight = message.block.block.header.height;
   // const snapshotId = `${blockHeight}:${contract}`;
