@@ -73,7 +73,9 @@ async function handleSwapEvent(
         token1_reserve: string;
         token2_reserve: string;
       };
-      logger.info(`(token1, token2) = (${token1_reserve}, ${token2_reserve})`);
+      logger.info(
+        `initial state for (${contract}) = (${token1_reserve}, ${token2_reserve})`
+      );
       wasmswap = Wasmswap.create({
         id: contract,
         contract: contract,
@@ -94,21 +96,17 @@ async function handleSwapEvent(
       inputToken === "Token2" ? BigInt(inputAmount) : -BigInt(outputAmount);
   }
   await wasmswap.save();
-  logger.info(
-    `processed swap ${wasmswap.token1Amount} ${wasmswap.token2Amount}`
-  );
 
-  // const blockHeight = message.block.block.header.height;
-  // const snapshotId = `${blockHeight}:${contract}`;
-  // await Snapshot.create({
-  //   id: snapshotId,
-  //   contract,
-  //   blockHeight: BigInt(blockHeight.toString()),
-  //   token1Amount: wasmswap.token1Amount,
-  //   token2Amount: wasmswap.token2Amount,
-  // }).save();
+  const blockHeight = message.block.block.header.height;
+  const snapshotId = `${blockHeight}:${contract}`;
+  const snapshot = (await Snapshot.get(snapshotId)) || new Snapshot(snapshotId);
+  snapshot.contract = contract;
+  snapshot.blockHeight = BigInt(blockHeight.toString());
+  snapshot.token1Amount = wasmswap.token1Amount;
+  snapshot.token2Amount = wasmswap.token2Amount;
+  await snapshot.save();
 
-  // logger.info(`processed swap. snapshot: (${snapshotId})`);
+  logger.info(`processed swap for pool (${contract})`);
 }
 
 export async function handleSwap(
