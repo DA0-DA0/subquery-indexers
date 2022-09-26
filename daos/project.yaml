@@ -28,7 +28,7 @@ network:
 
 dataSources:
   - kind: cosmos/Runtime
-    startBlock: 4937928
+    startBlock: 4415041 # first block on the fourth iteration of juno
     mapping:
       file: "./dist/index.js"
       handlers:
