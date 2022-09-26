@@ -95,7 +95,7 @@ async function handleSwapEvent(
   }
   await wasmswap.save();
   logger.info(
-    "processed swap ${wasmswap.token1Amount} ${wasmswap.token2Amount}"
+    `processed swap ${wasmswap.token1Amount} ${wasmswap.token2Amount}`
   );
 
   // const blockHeight = message.block.block.header.height;
