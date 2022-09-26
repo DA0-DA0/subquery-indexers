@@ -56,7 +56,7 @@ async function handleSwapEvent(
   )?.value;
 
   if (!outputAmount) {
-    logger.warn(`undefined output amount ${JSON.stringify(log, undefined, 2)}`);
+    logger.warn(`undefined output amount ${JSON.stringify(log)}`);
     return;
   }
 
@@ -73,6 +73,7 @@ async function handleSwapEvent(
         token1_reserve: string;
         token2_reserve: string;
       };
+      logger.info(`(token1, token2) = (${token1_reserve}, ${token2_reserve})`);
       wasmswap = Wasmswap.create({
         id: contract,
         contract: contract,
@@ -93,16 +94,19 @@ async function handleSwapEvent(
       inputToken === "Token2" ? BigInt(inputAmount) : -BigInt(outputAmount);
   }
   await wasmswap.save();
+  logger.info("processed swap");
 
-  const blockHeight = message.block.block.header.height;
-  const snapshotId = `${contract}:${blockHeight}`;
-  await Snapshot.create({
-    id: snapshotId,
-    contract,
-    blockHeight: BigInt(blockHeight.toString()),
-    token1Amount: wasmswap.token1Amount,
-    token2Amount: wasmswap.token2Amount,
-  }).save();
+  // const blockHeight = message.block.block.header.height;
+  // const snapshotId = `${blockHeight}:${contract}`;
+  // await Snapshot.create({
+  //   id: snapshotId,
+  //   contract,
+  //   blockHeight: BigInt(blockHeight.toString()),
+  //   token1Amount: wasmswap.token1Amount,
+  //   token2Amount: wasmswap.token2Amount,
+  // }).save();
+
+  // logger.info(`processed swap. snapshot: (${snapshotId})`);
 }
 
 export async function handleSwap(
