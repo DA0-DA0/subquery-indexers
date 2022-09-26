@@ -1,17 +1,19 @@
 # Stores staked balances per block height, per staking contract, per
 # address.
 type Snapshot @entity {
-  id: ID! # sender:contract:blockheight
-  addr: String! @index
+  id: ID! # contract:blockheight
   contract: String! @index
   blockHeight: BigInt! @index
-  amount: BigInt!
+
+  token1Amount: BigInt!
+  token2Amount: BigInt!
 }
 
 # Stores staked balances per staking contract, per address.
-type Balance @entity {
-  id: ID! # addr:contract
-  addr: String! @index
+type Wasmswap @entity {
+  id: ID! # contract
   contract: String! @index
-  amount: BigInt!
+
+  token1Amount: BigInt!
+  token2Amount: BigInt!
 }

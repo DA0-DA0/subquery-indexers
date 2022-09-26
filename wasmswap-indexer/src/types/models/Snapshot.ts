@@ -16,13 +16,13 @@ export class Snapshot implements Entity {
 
     public id: string;
 
-    public addr: string;
-
     public contract: string;
 
     public blockHeight: bigint;
 
-    public amount: bigint;
+    public token1Amount: bigint;
+
+    public token2Amount: bigint;
 
 
     async save(): Promise<void>{
@@ -45,13 +45,6 @@ export class Snapshot implements Entity {
         }
     }
 
-
-    static async getByAddr(addr: string): Promise<Snapshot[] | undefined>{
-      
-      const records = await store.getByField('Snapshot', 'addr', addr);
-      return records.map(record => Snapshot.create(record as SnapshotProps));
-      
-    }
 
     static async getByContract(contract: string): Promise<Snapshot[] | undefined>{
       

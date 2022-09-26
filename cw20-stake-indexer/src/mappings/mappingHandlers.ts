@@ -38,13 +38,28 @@ export async function handleSend(
   const contract = message.msg.decodedMsg.msg.send.contract;
 
   const balanceId = `${sender}:${contract}`;
-  const balance = (await Balance.get(balanceId)) || new Balance(balanceId);
-
-  balance.addr = sender;
-  balance.contract = contract;
-  balance.amount =
-    BigInt(message.msg.decodedMsg.msg.send.amount) +
-    (balance.amount || BigInt("0"));
+  let balance = await Balance.get(balanceId);
+  if (!balance) {
+    try {
+      const { balance: staked_balance }: { balance: string } =
+        await api.queryContractSmart(contract, {
+          staked_balance_at_height: { address: sender },
+        });
+      balance = Balance.create({
+        id: balanceId,
+        addr: sender,
+        contract,
+        amount: BigInt(staked_balance),
+      });
+    } catch (e) {
+      logger.error(
+        `failed to initialize state for contract (${contract}): (${e})`
+      );
+      return;
+    }
+  } else {
+    balance.amount += BigInt(message.msg.decodedMsg.msg.send.amount);
+  }
 
   await balance.save();
 
@@ -81,18 +96,28 @@ export async function handleUnstake(
   const contract = message.msg.decodedMsg.contract;
 
   const balanceId = `${sender}:${contract}`;
-  const balance = (await Balance.get(balanceId)) || new Balance(balanceId);
-
-  // I do what I must to appease the type checking queen.
-  const max = (a: BigInt, b: BigInt) => BigInt((a > b ? a : b).toString());
-
-  balance.addr = sender;
-  balance.contract = contract;
-  balance.amount = max(
-    BigInt("0"),
-    (balance.amount || BigInt("0")) -
-      BigInt(message.msg.decodedMsg.msg.unstake.amount)
-  );
+  let balance = await Balance.get(balanceId);
+  if (!balance) {
+    try {
+      const { balance: staked_balance }: { balance: string } =
+        await api.queryContractSmart(contract, {
+          staked_balance_at_height: { address: sender },
+        });
+      balance = Balance.create({
+        id: balanceId,
+        addr: sender,
+        contract,
+        amount: BigInt(staked_balance),
+      });
+    } catch (e) {
+      logger.error(
+        `failed to initialize state for contract (${contract}): (${e})`
+      );
+      return;
+    }
+  } else {
+    balance.amount += BigInt(message.msg.decodedMsg.msg.unstake.amount);
+  }
 
   await balance.save();
 
@@ -105,12 +130,11 @@ export async function handleUnstake(
     message.block.block.header.height + 1
   }`;
 
-  const snapshot = (await Snapshot.get(snapshotId)) || new Snapshot(snapshotId);
-  snapshot.addr = sender;
-  snapshot.contract = contract;
-  snapshot.amount = balance.amount;
-  snapshot.blockHeight = BigInt(
-    (message.block.block.header.height + 1).toString()
-  );
-  await snapshot.save();
+  await Snapshot.create({
+    id: snapshotId,
+    addr: sender,
+    contract,
+    amount: balance.amount,
+    blockHeight: BigInt((message.block.block.header.height + 1).toString()),
+  }).save();
 }
