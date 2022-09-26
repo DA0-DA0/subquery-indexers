@@ -20,8 +20,6 @@ export class Balance implements Entity {
 
     public contract: string;
 
-    public blockHeight: bigint;
-
     public amount: bigint;
 
 

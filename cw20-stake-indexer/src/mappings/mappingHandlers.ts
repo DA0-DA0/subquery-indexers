@@ -1,27 +1,5 @@
-import { Balance } from "../types";
-import {
-  CosmosEvent,
-  CosmosBlock,
-  CosmosMessage,
-  CosmosTransaction,
-} from "@subql/types-cosmos";
-
-// export async function handleBlock(block: CosmosBlock): Promise<void> {
-//   const data = JSON.stringify(block, undefined, 2);
-//   logger.info(data);
-// }
-
-/*
-
-export async function handleTransaction(tx: CosmosTransaction): Promise<void> {
-  const transactionRecord = Transaction.create({
-    id: tx.hash,
-    blockHeight: BigInt(tx.block.block.header.height),
-    timestamp: tx.block.block.header.time,
-  });
-  await transactionRecord.save();
-}
-*/
+import { Balance, Snapshot } from "../types";
+import { CosmosMessage } from "@subql/types-cosmos";
 
 interface ExecuteMsg<T> {
   sender: string;
@@ -59,21 +37,34 @@ export async function handleSend(
 
   const contract = message.msg.decodedMsg.msg.send.contract;
 
-  const id = `${sender}-${contract}`;
-  const balance = (await Balance.get(id)) || new Balance(id);
+  const balanceId = `${sender}:${contract}`;
+  const balance = (await Balance.get(balanceId)) || new Balance(balanceId);
 
-  balance.id = id;
   balance.addr = sender;
   balance.contract = contract;
-  // There is a one block delay before staked balances are considered.
-  balance.blockHeight = BigInt(
-    (message.block.block.header.height + 1).toString()
-  );
   balance.amount =
     BigInt(message.msg.decodedMsg.msg.send.amount) +
     (balance.amount || BigInt("0"));
 
   await balance.save();
+
+  // We want to make sure we have a single entry per address, per block height,
+  // per staking contract. If there are more than one stake messages in a single
+  // block, we should load and update the previous value.
+  //
+  // Note: there is a one block delay before staked balances are reflected.
+  const snapshotId = `${sender}:${contract}:${
+    message.block.block.header.height + 1
+  }`;
+
+  const snapshot = (await Snapshot.get(snapshotId)) || new Snapshot(snapshotId);
+  snapshot.addr = sender;
+  snapshot.contract = contract;
+  snapshot.amount = balance.amount;
+  snapshot.blockHeight = BigInt(
+    (message.block.block.header.height + 1).toString()
+  );
+  await snapshot.save();
 }
 
 export async function handleUnstake(
@@ -89,16 +80,37 @@ export async function handleUnstake(
   const sender = message.msg.decodedMsg.sender;
   const contract = message.msg.decodedMsg.contract;
 
-  const id = `${sender}-${contract}`;
-  const balance = (await Balance.get(id)) || new Balance(id);
+  const balanceId = `${sender}:${contract}`;
+  const balance = (await Balance.get(balanceId)) || new Balance(balanceId);
 
-  balance.id = id;
+  // I do what I must to appease the type checking queen.
+  const max = (a: BigInt, b: BigInt) => BigInt((a > b ? a : b).toString());
+
   balance.addr = sender;
   balance.contract = contract;
-  balance.blockHeight = BigInt(message.block.block.header.height.toString());
-  balance.amount = balance.amount
-    ? balance.amount - BigInt(message.msg.decodedMsg.msg.unstake.amount)
-    : BigInt("0");
+  balance.amount = max(
+    BigInt("0"),
+    (balance.amount || BigInt("0")) -
+      BigInt(message.msg.decodedMsg.msg.unstake.amount)
+  );
 
   await balance.save();
+
+  // We want to make sure we have a single entry per address, per block height,
+  // per staking contract. If there are more than one stake messages in a single
+  // block, we should load and update the previous value.
+  //
+  // Note: there is a one block delay before staked balances are reflected.
+  const snapshotId = `${sender}:${contract}:${
+    message.block.block.header.height + 1
+  }`;
+
+  const snapshot = (await Snapshot.get(snapshotId)) || new Snapshot(snapshotId);
+  snapshot.addr = sender;
+  snapshot.contract = contract;
+  snapshot.amount = balance.amount;
+  snapshot.blockHeight = BigInt(
+    (message.block.block.header.height + 1).toString()
+  );
+  await snapshot.save();
 }
