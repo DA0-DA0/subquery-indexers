@@ -92,17 +92,26 @@ async function handleSwapEvent(
     wasmswap.token2Amount +=
       inputToken === "Token2" ? BigInt(inputAmount) : -BigInt(outputAmount);
   }
-  await wasmswap.save();
+  try {
+    await wasmswap.save();
+  } catch (e) {
+    logger.error(`failed to save wasmswap (${contract}): ${e}`);
+  }
 
   const blockHeight = message.block.block.header.height;
   const snapshotId = `${contract}:${blockHeight}`;
-  await Snapshot.create({
-    id: snapshotId,
-    contract,
-    blockHeight: BigInt(blockHeight.toString()),
-    token1Amount: wasmswap.token1Amount,
-    token2Amount: wasmswap.token2Amount,
-  }).save();
+  try {
+    await Snapshot.create({
+      id: snapshotId,
+      contract,
+      blockHeight: BigInt(blockHeight.toString()),
+      token1Amount: wasmswap.token1Amount,
+      token2Amount: wasmswap.token2Amount,
+    }).save();
+  } catch (e) {
+    logger.error(`failed to save snapshot (${snapshotId}): ${e}`);
+  }
+  logger.info(`processed swap in ${contract}`);
 }
 
 export async function handleSwap(
