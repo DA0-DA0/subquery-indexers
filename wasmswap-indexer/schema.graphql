@@ -2,7 +2,7 @@
 # address.
 type Snapshot @entity {
   id: ID! # contract:blockheight
-  contract: String! @index
+  contract: String! @index(unique: true)
   blockHeight: BigInt! @index
 
   token1Amount: BigInt!
@@ -12,7 +12,7 @@ type Snapshot @entity {
 # Stores staked balances per staking contract, per address.
 type Wasmswap @entity {
   id: ID! # contract
-  contract: String! @index
+  contract: String! @index(unique: true)
 
   token1Amount: BigInt!
   token2Amount: BigInt!

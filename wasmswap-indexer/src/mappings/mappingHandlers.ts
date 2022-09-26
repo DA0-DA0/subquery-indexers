@@ -37,10 +37,16 @@ async function handleSwapEvent(
 ) {
   const { idx: messageIndex, tx } = message;
 
-  const log = JSON.parse(tx.tx.log) as {
+  let log: {
     msg_index?: number;
     events: Event[];
   }[];
+  try {
+    log = JSON.parse(tx.tx.log);
+  } catch (e) {
+    logger.warn(`failed to parse log: (${e})`);
+    return;
+  }
 
   const target = messageIndex === 0 ? undefined : messageIndex;
   const events = log.find(({ msg_index }) => msg_index === target)?.events;

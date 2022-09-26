@@ -46,10 +46,14 @@ export class Snapshot implements Entity {
     }
 
 
-    static async getByContract(contract: string): Promise<Snapshot[] | undefined>{
+    static async getByContract(contract: string): Promise<Snapshot | undefined>{
       
-      const records = await store.getByField('Snapshot', 'contract', contract);
-      return records.map(record => Snapshot.create(record as SnapshotProps));
+      const record = await store.getOneByField('Snapshot', 'contract', contract);
+      if (record){
+          return Snapshot.create(record as SnapshotProps);
+      }else{
+          return;
+      }
       
     }
 

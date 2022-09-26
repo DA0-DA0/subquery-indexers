@@ -44,10 +44,14 @@ export class Wasmswap implements Entity {
     }
 
 
-    static async getByContract(contract: string): Promise<Wasmswap[] | undefined>{
+    static async getByContract(contract: string): Promise<Wasmswap | undefined>{
       
-      const records = await store.getByField('Wasmswap', 'contract', contract);
-      return records.map(record => Wasmswap.create(record as WasmswapProps));
+      const record = await store.getOneByField('Wasmswap', 'contract', contract);
+      if (record){
+          return Wasmswap.create(record as WasmswapProps);
+      }else{
+          return;
+      }
       
     }
 
