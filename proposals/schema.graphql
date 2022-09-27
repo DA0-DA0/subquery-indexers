@@ -8,9 +8,9 @@ type Proposal @entity {
   module: ProposalModule!
   num: Int!
   open: Boolean!
-  createdAt: Date!
-  executedAt: Date
-  closedAt: Date
+  createdAt: Date! @index
+  executedAt: Date @index
+  closedAt: Date @index
   expiresAtDate: Date @index
   expiresAtHeight: Int @index
   votes: [ProposalVote] @derivedFrom(field: "proposal")
