@@ -34,19 +34,23 @@ const ensureProposalModuleExists = async (address: string) => {
   }
 };
 
+const getProposalId = (
+  proposalModuleAddress: string,
+  proposalNumber: number
+): string => `${proposalModuleAddress}:${proposalNumber}`;
+
 const updateOrCreateAndGetProposal = async (
   proposalModuleAddress: string,
   proposalNumber: number,
-  // Automatically update accordingly.
   shouldBeOpen: boolean,
-  // Whether or not to create a new proposal if it does not already exist.
-  createNew: boolean
+  blockDate: Date
 ): Promise<Proposal | undefined> => {
-  const id = `${proposalModuleAddress}:${proposalNumber}`;
-  let proposal = await Proposal.get(id);
+  let proposal = await Proposal.get(
+    getProposalId(proposalModuleAddress, proposalNumber)
+  );
 
   // Create proposal if does not exist.
-  if (!proposal && createNew) {
+  if (!proposal) {
     // Make proposal module if necessary.
     await ensureProposalModuleExists(proposalModuleAddress);
 
@@ -66,7 +70,7 @@ const updateOrCreateAndGetProposal = async (
         !response.proposal.expiration
       ) {
         throw new Error(
-          `Invalid proposal response: ${JSON.stringify(response)}`
+          `invalid proposal response: ${JSON.stringify(response)}`
         );
       }
 
@@ -80,26 +84,28 @@ const updateOrCreateAndGetProposal = async (
         "at_height" in expiration ? expiration.at_height : undefined;
     } catch (err) {
       logger.error(
-        `Error retrieving expiration for ${id}: ${
-          err instanceof Error ? err.message : `${err}`
-        }`
+        `Error retrieving expiration for ${getProposalId(
+          proposalModuleAddress,
+          proposalNumber
+        )}: ${err instanceof Error ? err.message : `${err}`}`
       );
       return;
     }
 
     proposal = Proposal.create({
-      id,
+      id: getProposalId(proposalModuleAddress, proposalNumber),
       moduleId: proposalModuleAddress,
       num: proposalNumber,
       open: shouldBeOpen,
       expiresAtDate,
       expiresAtHeight,
+      createdAt: blockDate,
     });
     await proposal.save();
   }
 
   // Update proposal open status if necessary.
-  if (proposal && proposal.open !== shouldBeOpen) {
+  if (proposal.open !== shouldBeOpen) {
     proposal.open = shouldBeOpen;
     await proposal.save();
   }
@@ -122,9 +128,19 @@ export async function handlePropose(
   cosmosMessage: CosmosMessage<DecodedMsg>
 ): Promise<void> {
   const {
-    contract,
-    msg: { propose },
-  } = cosmosMessage.msg.decodedMsg;
+    block: {
+      block: { header },
+    },
+    tx: {
+      tx: { log },
+    },
+    msg: {
+      decodedMsg: {
+        contract,
+        msg: { propose },
+      },
+    },
+  } = cosmosMessage;
 
   // cw-proposal-single and cw-proposal-multiple supported
   if (!("title" in propose) && !("description" in propose)) {
@@ -134,12 +150,16 @@ export async function handlePropose(
   let proposalNumber: number;
   try {
     proposalNumber = Number(
-      findAttribute(JSON.parse(cosmosMessage.tx.tx.log), "wasm", "proposal_id")
-        .value
+      findAttribute(JSON.parse(log), "wasm", "proposal_id").value
     );
+    if (isNaN(proposalNumber)) {
+      throw new Error(
+        `proposalNumber (${JSON.stringify(proposalNumber)}) is NaN`
+      );
+    }
   } catch (err) {
     logger.error(
-      `Error retrieving proposalNumber for ${contract}: ${
+      `----- ${contract} > ${proposalNumber} ==> Failed to retrieve proposalNumber during propose: ${
         err instanceof Error ? err.message : `${err}`
       }`
     );
@@ -147,37 +167,56 @@ export async function handlePropose(
   }
 
   // Make proposal (creates module as well).
-  await updateOrCreateAndGetProposal(contract, proposalNumber, true, true);
-
-  logger.info(`----- ${contract} > ${proposalNumber} ==> Proposed`);
+  if (
+    await updateOrCreateAndGetProposal(
+      contract,
+      proposalNumber,
+      true,
+      new Date(header.time)
+    )
+  ) {
+    logger.info(`----- ${contract} > ${proposalNumber} ==> Proposed`);
+  } else {
+    logger.info(
+      `----- ${contract} > ${proposalNumber} ==> Failed during propose`
+    );
+  }
 }
 
-export async function handleVote(
-  cosmosMessage: CosmosMessage<DecodedMsg>
-): Promise<void> {
-  const {
-    contract,
-    sender,
-    msg: { vote },
-  } = cosmosMessage.msg.decodedMsg;
-
+export async function handleVote({
+  block: {
+    block: { header },
+  },
+  tx: {
+    tx: { log },
+  },
+  msg: {
+    decodedMsg: {
+      contract,
+      sender,
+      msg: { vote },
+    },
+  },
+}: CosmosMessage<DecodedMsg>): Promise<void> {
   // cw-proposal-single and cw-proposal-multiple supported
-  const voteKeys = Object.keys(vote).sort();
-  if (voteKeys.join(".") !== "proposal_id.vote") {
+  if (Object.keys(vote).sort().join(".") !== "proposal_id.vote") {
     return;
   }
 
-  const blockDate = new Date(cosmosMessage.block.block.header.time);
+  const blockDate = new Date(header.time);
   const proposalNumber = Number(vote.proposal_id);
 
   let proposalOpen: boolean;
   try {
-    proposalOpen =
-      findAttribute(JSON.parse(cosmosMessage.tx.tx.log), "wasm", "status")
-        .value === "open";
+    const status = findAttribute(JSON.parse(log), "wasm", "status").value;
+    if (!status) {
+      throw new Error(`status (${JSON.stringify(status)}) is empty`);
+    }
+
+    proposalOpen = status === "open";
   } catch (err) {
     logger.error(
-      `Error retrieving status for ${contract} > ${proposalNumber}: ${
+      `----- ${contract} > ${proposalNumber} ==> Failed to retrieve status during vote: ${
         err instanceof Error ? err.message : `${err}`
       }`
     );
@@ -189,55 +228,73 @@ export async function handleVote(
     contract,
     proposalNumber,
     proposalOpen,
-    true
+    new Date(header.time)
   );
   if (!proposal) {
+    logger.error(
+      `----- ${contract} > ${proposalNumber} ==> Failed during vote`
+    );
     return;
   }
 
   // Create and save wallet voted proposal object with timestamp.
   await (
     await ProposalVote.create({
-      id: `${contract}:${proposalNumber}:${sender}`,
+      id: `${proposal.id}:${sender}`,
       walletId: wallet.id,
       proposalId: proposal.id,
       votedAt: blockDate,
     })
   ).save();
 
-  logger.info(`----- ${contract} > ${proposalNumber} > ${sender} ==> Voted (open: ${proposalOpen})`);
+  logger.info(
+    `----- ${contract} > ${proposalNumber} > ${sender} ==> Voted (open: ${proposalOpen})`
+  );
 }
 
-export async function handleExecute(
-  cosmosMessage: CosmosMessage<DecodedMsg>
-): Promise<void> {
-  const {
-    contract,
-    msg: { execute },
-  } = cosmosMessage.msg.decodedMsg;
-
+export async function handleExecute({
+  block: {
+    block: { header },
+  },
+  msg: {
+    decodedMsg: {
+      contract,
+      msg: { execute },
+    },
+  },
+}: CosmosMessage<DecodedMsg>): Promise<void> {
   // cw-proposal-single and cw-proposal-multiple supported
-  const executeKeys = Object.keys(execute).sort();
-  if (executeKeys.join(".") !== "proposal_id") {
+  if (Object.keys(execute).join(".") !== "proposal_id") {
     return;
   }
 
   const proposalNumber = Number(execute.proposal_id);
+  const proposal = await Proposal.get(getProposalId(contract, proposalNumber));
+  if (!proposal) {
+    logger.error(
+      `----- ${contract} > ${proposalNumber} ==> Failed to find proposal during execute`
+    );
+    return;
+  }
 
-  // Update to not open.
-  await updateOrCreateAndGetProposal(contract, proposalNumber, false, false);
+  proposal.open = false;
+  proposal.executedAt = new Date(header.time);
+  await proposal.save();
 
   logger.info(`----- ${contract} > ${proposalNumber} ==> Executed`);
 }
 
-export async function handleClose(
-  cosmosMessage: CosmosMessage<DecodedMsg>
-): Promise<void> {
-  const {
-    contract,
-    msg: { close },
-  } = cosmosMessage.msg.decodedMsg;
-
+export async function handleClose({
+  block: {
+    block: { header },
+  },
+  msg: {
+    decodedMsg: {
+      contract,
+      msg: { close },
+    },
+  },
+}: CosmosMessage<DecodedMsg>): Promise<void> {
   // cw-proposal-single and cw-proposal-multiple supported
   const closeKeys = Object.keys(close).sort();
   if (closeKeys.join(".") !== "proposal_id") {
@@ -245,9 +302,17 @@ export async function handleClose(
   }
 
   const proposalNumber = Number(close.proposal_id);
+  const proposal = await Proposal.get(getProposalId(contract, proposalNumber));
+  if (!proposal) {
+    logger.error(
+      `----- ${contract} > ${proposalNumber} ==> Failed to find proposal during close`
+    );
+    return;
+  }
 
-  // Update to not open.
-  await updateOrCreateAndGetProposal(contract, proposalNumber, false, false);
+  proposal.open = false;
+  proposal.closedAt = new Date(header.time);
+  await proposal.save();
 
   logger.info(`----- ${contract} > ${proposalNumber} ==> Closed`);
 }

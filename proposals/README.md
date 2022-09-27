@@ -1,7 +1,7 @@
-# DAO DAO V2 Inbox Index
+# DAO DAO Proposals Index
 
-Indexes DAO DAO proposal open statuses and the wallets that vote on them. Used
-to support the DAO DAO V2 Inbox page.
+Indexes DAO DAO proposal statuses and votes. Used to get timestamps for proposal
+states as well as provide data for the inbox.
 
 # Getting Started
 
