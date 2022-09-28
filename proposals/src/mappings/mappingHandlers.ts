@@ -1,5 +1,5 @@
 import { CosmosMessage } from "@subql/types-cosmos";
-import { findAttribute } from "@cosmjs/stargate/build/logs";
+import { Event } from "@cosmjs/stargate/build/logs";
 import { Proposal, ProposalModule, ProposalVote, Wallet } from "../types";
 
 interface DecodedMsg<T extends any = any> {
@@ -124,6 +124,28 @@ const getWallet = async (address: string) => {
   return wallet;
 };
 
+// Find attribute from output log taking into account message index within the
+// greater tx object.
+const findLogAttribute = ({ idx, tx }: CosmosMessage, eventType: string, attributeKey: string) => {
+  let log: {
+    msg_index?: number;
+    events: Event[];
+  }[];
+  try {
+    log = JSON.parse(tx.tx.log);
+  } catch (e) {
+    logger.warn(`failed to parse log: (${e})`);
+    return;
+  }
+
+  // First event has no msg_index field set.
+  const targetIdx = idx === 0 ? undefined : idx;
+  const events = log.find(({ msg_index }) => msg_index === targetIdx)?.events;
+
+  const eventAttributes = events?.find(({ type }) => type === eventType)?.attributes ?? [];
+  return eventAttributes.find(({ key }) => key === attributeKey)?.value;
+}
+
 export async function handlePropose(
   cosmosMessage: CosmosMessage<DecodedMsg>
 ): Promise<void> {
@@ -150,7 +172,7 @@ export async function handlePropose(
   let proposalNumber: number;
   try {
     proposalNumber = Number(
-      findAttribute(JSON.parse(log), "wasm", "proposal_id").value
+      findLogAttribute(cosmosMessage, "wasm", "proposal_id")
     );
     if (isNaN(proposalNumber)) {
       throw new Error(
@@ -183,21 +205,23 @@ export async function handlePropose(
   }
 }
 
-export async function handleVote({
-  block: {
-    block: { header },
-  },
-  tx: {
-    tx: { log },
-  },
-  msg: {
-    decodedMsg: {
-      contract,
-      sender,
-      msg: { vote },
+export async function handleVote(cosmosMessage: CosmosMessage<DecodedMsg>): Promise<void> {
+  const {
+    block: {
+      block: { header },
     },
-  },
-}: CosmosMessage<DecodedMsg>): Promise<void> {
+    tx: {
+      tx: { log },
+    },
+    msg: {
+      decodedMsg: {
+        contract,
+        sender,
+        msg: { vote },
+      },
+    },
+  } = cosmosMessage;
+
   // cw-proposal-single and cw-proposal-multiple supported
   if (Object.keys(vote).sort().join(".") !== "proposal_id.vote") {
     return;
@@ -208,7 +232,7 @@ export async function handleVote({
 
   let proposalOpen: boolean;
   try {
-    const status = findAttribute(JSON.parse(log), "wasm", "status").value;
+    const status = findLogAttribute(cosmosMessage, "wasm", "status");
     if (!status) {
       throw new Error(`status (${JSON.stringify(status)}) is empty`);
     }
