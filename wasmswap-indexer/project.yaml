@@ -1,0 +1,42 @@
+specVersion: 1.0.0
+name: wasmswap
+version: 0.0.1
+runner:
+  node:
+    name: "@subql/node-cosmos"
+    version: ">=0.1.0"
+  query:
+    name: "@subql/query"
+    version: "*"
+description: >-
+  indexer for wasmswap liquidity reserves over time.
+repository: https://github.com/DA0-DA0/subquery-indexers
+schema:
+  file: ./schema.graphql
+
+network:
+  chainId: juno-1
+  endpoint: https://juno.api.onfinality.io/public
+  dictionary: https://api.subquery.network/sq/subquery/cosmos-juno-dictionary
+
+dataSources:
+  - kind: cosmos/Runtime
+    startBlock: 4415041
+    mapping:
+      file: "./dist/index.js"
+      handlers:
+        - handler: handleSwap
+          kind: cosmos/MessageHandler
+          filter:
+            type: "/cosmwasm.wasm.v1.MsgExecuteContract"
+            contractCall: "swap"
+        - handler: handlePassThroughSwap
+          kind: cosmos/MessageHandler
+          filter:
+            type: "/cosmwasm.wasm.v1.MsgExecuteContract"
+            contractCall: "pass_through_swap"
+        - handler: handleSwapTo
+          kind: cosmos/MessageHandler
+          filter:
+            type: "/cosmwasm.wasm.v1.MsgExecuteContract"
+            contractCall: "swap_and_send_to"
