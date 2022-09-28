@@ -1,6 +1,7 @@
 import { CosmosMessage } from "@subql/types-cosmos";
 import { Event } from "@cosmjs/stargate/build/logs";
 import { Proposal, ProposalModule, ProposalVote, Wallet } from "../types";
+import { objectKeyLayoutMatchesSchema } from "./utils";
 
 interface DecodedMsg<T extends any = any> {
   sender: string;
@@ -63,11 +64,16 @@ const updateOrCreateAndGetProposal = async (
       });
       // cw-proposal-single and cw-proposal-multiple supported
       if (
-        !response ||
-        !("proposal" in response) ||
-        !response.proposal ||
-        !("expiration" in response.proposal) ||
-        !response.proposal.expiration
+        !objectKeyLayoutMatchesSchema(response, {
+          _: {
+            proposal: {
+              _: {
+                expiration: {},
+              },
+            },
+          },
+          exact: true,
+        })
       ) {
         throw new Error(
           `invalid proposal response: ${JSON.stringify(response)}`
@@ -126,7 +132,11 @@ const getWallet = async (address: string) => {
 
 // Find attribute from output log taking into account message index within the
 // greater tx object.
-const findLogAttribute = ({ idx, tx }: CosmosMessage, eventType: string, attributeKey: string) => {
+const findLogAttribute = (
+  { idx, tx }: CosmosMessage,
+  eventType: string,
+  attributeKey: string
+) => {
   let log: {
     msg_index?: number;
     events: Event[];
@@ -142,9 +152,10 @@ const findLogAttribute = ({ idx, tx }: CosmosMessage, eventType: string, attribu
   const targetIdx = idx === 0 ? undefined : idx;
   const events = log.find(({ msg_index }) => msg_index === targetIdx)?.events;
 
-  const eventAttributes = events?.find(({ type }) => type === eventType)?.attributes ?? [];
+  const eventAttributes =
+    events?.find(({ type }) => type === eventType)?.attributes ?? [];
   return eventAttributes.find(({ key }) => key === attributeKey)?.value;
-}
+};
 
 export async function handlePropose(
   cosmosMessage: CosmosMessage<DecodedMsg>
@@ -152,9 +163,6 @@ export async function handlePropose(
   const {
     block: {
       block: { header },
-    },
-    tx: {
-      tx: { log },
     },
     msg: {
       decodedMsg: {
@@ -165,7 +173,14 @@ export async function handlePropose(
   } = cosmosMessage;
 
   // cw-proposal-single and cw-proposal-multiple supported
-  if (!("title" in propose) && !("description" in propose)) {
+  if (
+    !objectKeyLayoutMatchesSchema(propose, {
+      _: {
+        title: {},
+        description: {},
+      },
+    })
+  ) {
     return;
   }
 
@@ -205,13 +220,12 @@ export async function handlePropose(
   }
 }
 
-export async function handleVote(cosmosMessage: CosmosMessage<DecodedMsg>): Promise<void> {
+export async function handleVote(
+  cosmosMessage: CosmosMessage<DecodedMsg>
+): Promise<void> {
   const {
     block: {
       block: { header },
-    },
-    tx: {
-      tx: { log },
     },
     msg: {
       decodedMsg: {
@@ -223,7 +237,15 @@ export async function handleVote(cosmosMessage: CosmosMessage<DecodedMsg>): Prom
   } = cosmosMessage;
 
   // cw-proposal-single and cw-proposal-multiple supported
-  if (Object.keys(vote).sort().join(".") !== "proposal_id.vote") {
+  if (
+    !objectKeyLayoutMatchesSchema(vote, {
+      _: {
+        proposal_id: {},
+        vote: {},
+      },
+      exact: true,
+    })
+  ) {
     return;
   }
 
@@ -288,7 +310,14 @@ export async function handleExecute({
   },
 }: CosmosMessage<DecodedMsg>): Promise<void> {
   // cw-proposal-single and cw-proposal-multiple supported
-  if (Object.keys(execute).join(".") !== "proposal_id") {
+  if (
+    !objectKeyLayoutMatchesSchema(execute, {
+      _: {
+        proposal_id: {},
+      },
+      exact: true,
+    })
+  ) {
     return;
   }
 
@@ -320,8 +349,14 @@ export async function handleClose({
   },
 }: CosmosMessage<DecodedMsg>): Promise<void> {
   // cw-proposal-single and cw-proposal-multiple supported
-  const closeKeys = Object.keys(close).sort();
-  if (closeKeys.join(".") !== "proposal_id") {
+  if (
+    !objectKeyLayoutMatchesSchema(close, {
+      _: {
+        proposal_id: {},
+      },
+      exact: true,
+    })
+  ) {
     return;
   }
 
