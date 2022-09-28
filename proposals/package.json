@@ -1,7 +1,7 @@
 {
-  "name": "dao-dao-v2-inbox-subquery-indexer",
+  "name": "dao-dao-proposals-subquery-indexer",
   "version": "0.0.1",
-  "description": "Indexes DAO DAO proposal open statuses and the wallets that vote on them. Used to support the DAO DAO V2 Inbox page.",
+  "description": "Indexes DAO DAO proposal statuses and votes. Used to get timestamps for proposal states as well as provide data for the inbox.",
   "main": "dist/index.js",
   "scripts": {
     "build": "subql build",
@@ -10,9 +10,9 @@
     "codegen": "subql codegen && replace-in-files --string '@subql/types' --replacement '@subql/types-cosmos' src/types/models/*",
     "start:docker": "docker-compose pull && docker-compose up --remove-orphans",
     "publish": "subql publish",
-    "deploy:production": "subql deployment:deploy -d --org=NoahSaso --projectName=dao-dao-v2-inbox"
+    "deploy:production": "subql deployment:deploy -d --org=NoahSaso --projectName=dao-dao-proposals"
   },
-  "homepage": "https://github.com/DA0-DA0/subquery-indexers/tree/main/v2-inbox",
+  "homepage": "https://github.com/DA0-DA0/subquery-indexers/tree/main/proposals",
   "repository": "https://github.com/DA0-DA0/subquery-indexers",
   "files": [
     "dist",
