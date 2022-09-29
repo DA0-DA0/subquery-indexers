@@ -6,7 +6,6 @@
   "scripts": {
     "build": "subql build",
     "prepack": "rm -rf dist && npm build",
-    "test": "jest",
     "codegen": "subql codegen && replace-in-files --string '@subql/types' --replacement '@subql/types-cosmos' src/types/models/*",
     "start:docker": "docker-compose pull && docker-compose up --remove-orphans",
     "lint": "eslint .",

@@ -8,7 +8,8 @@
   "scripts": {
     "akashify": "ts-node ./packages/akashify/akashify.ts",
     "lint": "yarn workspaces foreach -ipv run lint",
-    "format": "yarn workspaces foreach -ipv run format"
+    "format": "yarn workspaces foreach -ipv run format",
+    "test": "yarn workspaces foreach -ipv run test"
   },
   "workspaces": [
     "indexers/*",
