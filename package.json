@@ -6,10 +6,13 @@
   "license": "BSD 3-Clause Clear",
   "private": true,
   "scripts": {
-    "akashify": "ts-node ./packages/akashify/akashify.ts"
+    "akashify": "ts-node ./packages/akashify/akashify.ts",
+    "lint": "yarn workspaces foreach -ipv run lint",
+    "format": "yarn workspaces foreach -ipv run format"
   },
   "workspaces": [
     "indexers/*",
     "packages/*"
-  ]
+  ],
+  "packageManager": "yarn@3.2.3"
 }

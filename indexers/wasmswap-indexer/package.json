@@ -8,7 +8,9 @@
     "prepack": "rm -rf dist && npm build",
     "test": "jest",
     "codegen": "subql codegen && replace-in-files --string '@subql/types' --replacement '@subql/types-cosmos' src/types/models/*",
-    "start:docker": "docker-compose pull && docker-compose up --remove-orphans"
+    "start:docker": "docker-compose pull && docker-compose up --remove-orphans",
+    "lint": "eslint .",
+    "format": "eslint . --fix"
   },
   "files": [
     "dist",
@@ -19,6 +21,7 @@
   "devDependencies": {
     "@cosmjs/stargate": "^0.28.9",
     "@subql/cli": "^1.1.0",
+    "eslint": "^8.23.1",
     "replace-in-files-cli": "^2.0.0",
     "typescript": "^4.8.4"
   },
@@ -28,5 +31,6 @@
     "pino": "^7.8.0",
     "ts-proto": "^1.112.1",
     "tslib": "^2.3.1"
-  }
+  },
+  "prettier": "config/prettier"
 }
