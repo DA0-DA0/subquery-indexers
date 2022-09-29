@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "Script to generate Akash deploy yml files for SubQuery indexers.",
   "license": "BSD 3-Clause Clear",
+  "scripts": {
+    "run": "ts-node ./akashify.ts"
+  },
   "devDependencies": {
     "@subql/types-cosmos": "^0.1.0",
     "@types/adm-zip": "^0.5.0",
