@@ -1,2 +1,7 @@
 .data
 node_modules
+
+# Akashify
+.env
+deploy_*.yml
+docker-compose.akash-local.yml

@@ -1,31 +1,26 @@
 {
-  "name": "dao-dao-daos",
+  "name": "cw20-stake-indexer",
   "version": "0.0.1",
-  "description": "Indexes DAOs. Used to support the DAO DAO search and provide a public API for listing DAOs.",
+  "description": "",
   "main": "dist/index.js",
   "scripts": {
     "build": "subql build",
     "prepack": "rm -rf dist && npm build",
     "test": "jest",
     "codegen": "subql codegen && replace-in-files --string '@subql/types' --replacement '@subql/types-cosmos' src/types/models/*",
-    "start:docker": "docker-compose pull && docker-compose up --remove-orphans",
-    "publish": "subql publish",
-    "deploy:production": "subql deployment:deploy -d --org=NoahSaso --projectName=dao-dao-daos"
+    "start:docker": "docker-compose pull && docker-compose up --remove-orphans"
   },
-  "homepage": "https://github.com/DA0-DA0/subquery-indexers/tree/main/daos",
-  "repository": "https://github.com/DA0-DA0/subquery-indexers",
   "files": [
     "dist",
     "schema.graphql",
     "project.yaml"
   ],
-  "author": "Noah Saso <noahsaso@gmail.com>",
-  "license": "Clear BSD",
+  "license": "BSD 3-Clause Clear",
   "devDependencies": {
     "@cosmjs/stargate": "^0.28.9",
     "@subql/cli": "^1.1.0",
     "replace-in-files-cli": "^2.0.0",
-    "typescript": "^4.7.4"
+    "typescript": "^4.8.4"
   },
   "dependencies": {
     "@subql/types-cosmos": "^0.1.0",

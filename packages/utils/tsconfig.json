@@ -7,12 +7,12 @@
     "importHelpers": true,
     "resolveJsonModule": true,
     "module": "commonjs",
-    "outDir": "dist",
     "rootDir": "src",
     "target": "es2017"
   },
   "include": [
     "src/**/*",
-    "node_modules/@subql/types-cosmos/dist/global.d.ts"
-  ]
+    "../../node_modules/@subql/types-cosmos/dist/global.d.ts"
+  ],
+  "exclude": ["node_modules"]
 }

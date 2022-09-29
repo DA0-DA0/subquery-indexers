@@ -1,2 +1,3 @@
 # subquery-indexers
-A collection of indexers built on SubQuery Network.
+
+Indexers built with SubQuery to support DAO DAO frontend and API needs.

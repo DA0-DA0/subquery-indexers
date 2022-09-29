@@ -11,7 +11,7 @@ services:
           - service: cron
     env:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
+      - POSTGRES_PASSWORD={{dbPassword}}
     # uncomment when persistent storage works
     # params:
     #   storage:
@@ -22,19 +22,19 @@ services:
     image: ghcr.io/ovrclk/akash-postgres-restore:v0.0.4
     env:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
+      - POSTGRES_PASSWORD={{dbPassword}}
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DATABASE=postgres
-      - BACKUP_PATH=dao-dao-subql-indexers/__project__
+      - BACKUP_PATH={{backup.bucket}}/{{backup.folder}}
       # get these from s3 bucket provider
-      - BACKUP_KEY=__filebase_key__
-      - BACKUP_SECRET=__filebase_secret__
-      - BACKUP_PASSPHRASE=__encryption_passphrase__
-      - BACKUP_HOST=https://s3.filebase.com
+      - BACKUP_KEY={{backup.key}}
+      - BACKUP_SECRET={{backup.secret}}
+      - BACKUP_PASSPHRASE={{backup.encryptionPassphrase}}
+      - BACKUP_HOST={{backup.host}}
       # every 15 minutes
-      - BACKUP_SCHEDULE=*/15 * * * *
-      - BACKUP_RETAIN=7 days
+      - BACKUP_SCHEDULE={{backup.schedule}}
+      - BACKUP_RETAIN={{backup.retain}}
     depends_on:
       - service: postgres
 
@@ -48,13 +48,13 @@ services:
       - service: postgres
     env:
       - DB_USER=postgres
-      - DB_PASS=password
+      - DB_PASS={{dbPassword}}
       - DB_DATABASE=postgres
       - DB_HOST=postgres
       - DB_PORT=5432
       # zip must contain dist (from npm run codegen && npm run build),
-      # project.yaml, proto, and schema.graphql
-      - PROJECT_ZIP_URL=__url_to_project_zip__
+      # project.yaml, and schema.graphql
+      - PROJECT_ZIP_URL={{zipUrl}}
 
   graphql-engine:
     image: noahsaso/subql-query-v1.5.0:v1
@@ -67,7 +67,7 @@ services:
       - service: subquery-node
     env:
       - DB_USER=postgres
-      - DB_PASS=password
+      - DB_PASS={{dbPassword}}
       - DB_DATABASE=postgres
       - DB_HOST=postgres
       - DB_PORT=5432

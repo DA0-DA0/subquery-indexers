@@ -1,8 +1,6 @@
 # This file exists to locally test run projects in docker-compose before
 # deploying them to akash. Useful for debugging if something weird is happening.
 
-# Author: Noah Saso
-
 version: '3'
 
 services:
@@ -31,9 +29,7 @@ services:
       DB_DATABASE: postgres
       DB_HOST: postgres
       DB_PORT: 5432
-      # zip must contain dist (from npm run codegen && npm run build),
-      # project.yaml, proto, and schema.graphql
-      PROJECT_ZIP_URL: __url_to_project_zip__
+      PROJECT_ZIP_URL: {{zipUrl}}
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://subquery-node:3000/ready" ]
       interval: 3s

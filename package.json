@@ -1,0 +1,15 @@
+{
+  "name": "subquery-indexers",
+  "version": "0.0.1",
+  "description": "Indexers built with SubQuery to support DAO DAO frontend and API needs.",
+  "repository": "https://github.com/DA0-DA0/subquery-indexers",
+  "license": "BSD 3-Clause Clear",
+  "private": true,
+  "scripts": {
+    "akashify": "ts-node ./packages/akashify/akashify.ts"
+  },
+  "workspaces": [
+    "indexers/*",
+    "packages/*"
+  ]
+}

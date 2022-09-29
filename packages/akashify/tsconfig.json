@@ -7,12 +7,9 @@
     "importHelpers": true,
     "resolveJsonModule": true,
     "module": "commonjs",
-    "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "target": "es2017"
   },
-  "include": [
-    "src/**/*",
-    "node_modules/@subql/types-cosmos/dist/global.d.ts"
-  ]
+  "include": ["./akashify.ts"],
+  "exclude": ["node_modules"]
 }
