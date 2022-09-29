@@ -1,117 +1,118 @@
-import { CosmosMessage } from "@subql/types-cosmos";
-import { findAttribute } from "@cosmjs/stargate/build/logs";
-import { Dao } from "../types";
-import { BlockHeader } from "@cosmjs/stargate";
+import { BlockHeader } from '@cosmjs/stargate'
+import { findAttribute } from '@cosmjs/stargate/build/logs'
+import { CosmosMessage } from '@subql/types-cosmos'
+
+import { Dao } from '../types'
 
 interface DecodedMsg<T extends any = any> {
-  sender: string;
-  contract: string;
-  msg: T;
+  sender: string
+  contract: string
+  msg: T
   funds: {
-    denom: string;
-    amount: string;
-  }[];
+    denom: string
+    amount: string
+  }[]
 }
 
 interface Config {
   // v1 and v2
-  name: string;
-  description: string;
-  image_url?: string | null;
+  name: string
+  description: string
+  image_url?: string | null
   // v2
-  dao_uri?: string | null;
+  dao_uri?: string | null
 }
 
 interface DumpedState {
   // v2
-  admin?: string | null;
+  admin?: string | null
   // v1 and v2
-  config: Config;
+  config: Config
   // v2
-  created_timestamp?: string | null;
+  created_timestamp?: string | null
 }
 
 interface InstantiateContractWithSelfAdmin {
   instantiate_contract_with_self_admin: {
-    code_id: number;
-    instantiate_msg: string;
-    label: string;
-  };
+    code_id: number
+    instantiate_msg: string
+    label: string
+  }
 }
 
 interface InstantiateMsg extends Config {
   // v2
-  admin?: string | null;
+  admin?: string | null
 }
 
 interface UpdateConfig {
   update_config: {
-    config: Config;
-  };
+    config: Config
+  }
 }
 
 const dumpStateWithBlock = async (
   coreAddress: string
 ): Promise<
   | {
-      dumpedState: DumpedState;
-      header: BlockHeader;
+      dumpedState: DumpedState
+      header: BlockHeader
     }
   | undefined
 > => {
   // Get all DAO state for admin and config from chain.
-  let dumpedState: DumpedState;
-  let header: BlockHeader;
+  let dumpedState: DumpedState
+  let header: BlockHeader
   try {
     dumpedState = await api.queryContractSmart(coreAddress, {
       dump_state: {},
-    });
+    })
     // v1 and v2 both contain `config`
     if (
       !dumpedState ||
-      !("config" in dumpedState) ||
+      !('config' in dumpedState) ||
       !dumpedState.config ||
-      !("name" in dumpedState.config) ||
-      !("description" in dumpedState.config)
+      !('name' in dumpedState.config) ||
+      !('description' in dumpedState.config)
     ) {
       throw new Error(
         `dumped state ${JSON.stringify(
           dumpedState
         )} does not look like a cw-core dump state response`
-      );
+      )
     }
 
-    header = await (await api.getBlock()).header;
+    header = await (await api.getBlock()).header
   } catch (err) {
     logger.error(
       `Error retrieving dumpedState or block header for ${coreAddress} during creating non-existent DAO: ${
         err instanceof Error ? err.message : `${err}`
       }`
-    );
-    return undefined;
+    )
+    return undefined
   }
 
   return {
     dumpedState,
     header,
-  };
-};
+  }
+}
 
 const getOrCreateDao = async (
   coreAddress: string
 ): Promise<Dao | undefined> => {
-  let dao = await Dao.get(coreAddress);
+  let dao = await Dao.get(coreAddress)
 
   if (!dao) {
-    const dumpedStateWithBlock = await dumpStateWithBlock(coreAddress);
+    const dumpedStateWithBlock = await dumpStateWithBlock(coreAddress)
     if (!dumpedStateWithBlock) {
-      return;
+      return
     }
 
     const {
       dumpedState: { admin, config, created_timestamp },
       header,
-    } = dumpedStateWithBlock;
+    } = dumpedStateWithBlock
 
     dao = Dao.create({
       id: coreAddress,
@@ -125,18 +126,18 @@ const getOrCreateDao = async (
       daoUri: config.dao_uri ?? undefined,
       infoUpdatedAt: new Date(header.time),
       infoUpdatedHeight: BigInt(header.height),
-    });
+    })
 
     // Create parent DAO if doesn't exist.
     if (admin && (await getOrCreateDao(admin))) {
-      dao.parentDaoId = admin;
-      dao.parentDaoUpdatedAt = new Date(header.time);
-      dao.parentDaoUpdatedHeight = BigInt(header.height);
+      dao.parentDaoId = admin
+      dao.parentDaoUpdatedAt = new Date(header.time)
+      dao.parentDaoUpdatedHeight = BigInt(header.height)
     }
   }
 
-  return dao;
-};
+  return dao
+}
 
 export async function handleInstantiate(
   cosmosMessage: CosmosMessage<DecodedMsg<InstantiateContractWithSelfAdmin>>
@@ -156,58 +157,58 @@ export async function handleInstantiate(
     tx: {
       tx: { log },
     },
-  } = cosmosMessage;
+  } = cosmosMessage
 
-  let coreAddress: string;
+  let coreAddress: string
   try {
     coreAddress = findAttribute(
       JSON.parse(log),
-      "instantiate",
-      "_contract_address"
-    ).value;
+      'instantiate',
+      '_contract_address'
+    ).value
     if (!coreAddress) {
-      throw new Error(`coreAddress (${JSON.stringify(coreAddress)}) empty`);
+      throw new Error(`coreAddress (${JSON.stringify(coreAddress)}) empty`)
     }
   } catch (err) {
     logger.error(
       `----- ${contract} ==> Error retrieving coreAddress during instantiate: ${
         err instanceof Error ? err.message : `${err}`
       }`
-    );
-    return;
+    )
+    return
   }
 
-  let instantiateMsg: InstantiateMsg;
+  let instantiateMsg: InstantiateMsg
   try {
     instantiateMsg = JSON.parse(
-      Buffer.from(instantiate_msg, "base64").toString("ascii")
-    );
+      Buffer.from(instantiate_msg, 'base64').toString('ascii')
+    )
     if (
       !instantiateMsg ||
-      !("name" in instantiateMsg) ||
-      !("description" in instantiateMsg)
+      !('name' in instantiateMsg) ||
+      !('description' in instantiateMsg)
     ) {
       throw new Error(
         `instantiate msg ${JSON.stringify(
           instantiateMsg
         )} does not look like a cw-core instantiate msg`
-      );
+      )
     }
   } catch (err) {
     logger.error(
       `----- ${contract} ==> Error parsing instantiate_msg for core (${coreAddress}) in factory: ${
         err instanceof Error ? err.message : `${err}`
       }`
-    );
-    return;
+    )
+    return
   }
 
   // It should never exist at this point if we index in order of old to new
   // block height, but why not be safe. If it does happen to exist, update its
   // created timestamp since this is its instantiation.
-  let dao = await Dao.get(coreAddress);
+  let dao = await Dao.get(coreAddress)
   if (dao) {
-    dao.created = new Date(header.time);
+    dao.created = new Date(header.time)
   } else if (!dao) {
     dao = Dao.create({
       id: coreAddress,
@@ -218,18 +219,18 @@ export async function handleInstantiate(
       daoUri: instantiateMsg.dao_uri ?? undefined,
       infoUpdatedAt: new Date(header.time),
       infoUpdatedHeight: BigInt(header.height),
-    });
+    })
 
     // Create parent DAO if doesn't exist.
     if (instantiateMsg.admin && (await getOrCreateDao(instantiateMsg.admin))) {
-      dao.parentDaoId = instantiateMsg.admin;
-      dao.parentDaoUpdatedAt = new Date(header.time);
-      dao.parentDaoUpdatedHeight = BigInt(header.height);
+      dao.parentDaoId = instantiateMsg.admin
+      dao.parentDaoUpdatedAt = new Date(header.time)
+      dao.parentDaoUpdatedHeight = BigInt(header.height)
     }
   }
-  await dao.save();
+  await dao.save()
 
-  logger.info(`----- ${coreAddress} ==> Instantiated (factory: ${contract})`);
+  logger.info(`----- ${coreAddress} ==> Instantiated (factory: ${contract})`)
 }
 
 export async function handleUpdateConfig(
@@ -247,14 +248,14 @@ export async function handleUpdateConfig(
         },
       },
     },
-  } = cosmosMessage;
+  } = cosmosMessage
 
-  const dao = await getOrCreateDao(contract);
+  const dao = await getOrCreateDao(contract)
   if (!dao) {
     logger.error(
       `----- ${contract} ==> Error creating DAO during update_config`
-    );
-    return;
+    )
+    return
   }
 
   // Only update DAO if its info was most recently updated before this block.
@@ -263,19 +264,19 @@ export async function handleUpdateConfig(
   // instantiations (since we create parent DAOs using manual queries when
   // possible), for example.
   if (dao.infoUpdatedHeight < header.height) {
-    dao.name = config.name;
-    dao.description = config.description;
-    dao.imageUrl = config.image_url ?? undefined;
-    dao.daoUri = config.dao_uri ?? undefined;
-    dao.infoUpdatedAt = new Date(header.time);
-    dao.infoUpdatedHeight = BigInt(header.height);
+    dao.name = config.name
+    dao.description = config.description
+    dao.imageUrl = config.image_url ?? undefined
+    dao.daoUri = config.dao_uri ?? undefined
+    dao.infoUpdatedAt = new Date(header.time)
+    dao.infoUpdatedHeight = BigInt(header.height)
 
-    await dao.save();
-    logger.info(`----- ${contract} ==> Updated config`);
+    await dao.save()
+    logger.info(`----- ${contract} ==> Updated config`)
   } else {
     logger.error(
       `----- ${contract} ==> Info already newer during update_config`
-    );
+    )
   }
 }
 
@@ -292,14 +293,12 @@ export async function handleUpdateAdmin(
     tx: {
       tx: { log },
     },
-  } = cosmosMessage;
+  } = cosmosMessage
 
-  const dao = await getOrCreateDao(contract);
+  const dao = await getOrCreateDao(contract)
   if (!dao) {
-    logger.error(
-      `----- ${contract} ==> Error creating DAO during update_admin`
-    );
-    return;
+    logger.error(`----- ${contract} ==> Error creating DAO during update_admin`)
+    return
   }
   // Only update DAO admin if its admin was most recently updated before this
   // block. This may happen if a parent DAO was instantiated with an admin
@@ -312,35 +311,35 @@ export async function handleUpdateAdmin(
   ) {
     logger.error(
       `----- ${contract} ==> Parent DAO already newer during update_admin`
-    );
-    return;
+    )
+    return
   }
 
-  let newAdmin: string;
+  let newAdmin: string
   try {
-    newAdmin = findAttribute(JSON.parse(log), "wasm", "new_admin").value;
+    newAdmin = findAttribute(JSON.parse(log), 'wasm', 'new_admin').value
     if (!newAdmin) {
-      throw new Error(`newAdmin (${JSON.stringify(newAdmin)}) empty`);
+      throw new Error(`newAdmin (${JSON.stringify(newAdmin)}) empty`)
     }
   } catch (err) {
     logger.error(
       `Error retrieving newAdmin for ${contract}: ${
         err instanceof Error ? err.message : `${err}`
       }`
-    );
-    return;
+    )
+    return
   }
 
   // Create parent DAO if doesn't exist.
   if (await getOrCreateDao(newAdmin)) {
-    dao.parentDaoId = newAdmin;
-    dao.parentDaoUpdatedAt = new Date(header.time);
-    dao.parentDaoUpdatedHeight = BigInt(header.height);
-    await dao.save();
-    logger.info(`----- ${contract} ==> Parent DAO updated to ${newAdmin}`);
+    dao.parentDaoId = newAdmin
+    dao.parentDaoUpdatedAt = new Date(header.time)
+    dao.parentDaoUpdatedHeight = BigInt(header.height)
+    await dao.save()
+    logger.info(`----- ${contract} ==> Parent DAO updated to ${newAdmin}`)
   } else {
     logger.error(
       `----- ${contract} ==> Error creating parent DAO (${newAdmin}) during update_admin`
-    );
+    )
   }
 }

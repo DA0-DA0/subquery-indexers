@@ -2,7 +2,6 @@
 
 // Auto-generated , DO NOT EDIT
 
-export {Snapshot} from "./Snapshot"
+export { Snapshot } from './Snapshot'
 
-export {Wasmswap} from "./Wasmswap"
-
+export { Wasmswap } from './Wasmswap'

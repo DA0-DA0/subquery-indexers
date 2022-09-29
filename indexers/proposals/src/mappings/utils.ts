@@ -3,10 +3,13 @@ type ObjectMatchSchema =
   | string[]
   | {
       // Required keys with optional nested schema.
-      _: Record<string, ObjectMatchSchema | { [key: string | number | symbol]: never }>;
+      _: Record<
+        string,
+        ObjectMatchSchema | { [key: string | number | symbol]: never }
+      >
       // If true, object can needs exactly the keys in children—no more, no less.
-      exact?: boolean;
-    };
+      exact?: boolean
+    }
 
 // Check if object has the expected fields.
 export const objectKeyLayoutMatchesSchema = (
@@ -14,25 +17,25 @@ export const objectKeyLayoutMatchesSchema = (
   schema: ObjectMatchSchema
 ): boolean => {
   if (!object) {
-    return false;
+    return false
   }
 
-  const objectKeys = new Set(Object.keys(object));
+  const objectKeys = new Set(Object.keys(object))
 
   // If passed string array, simply check presence of keys.
   if (Array.isArray(schema)) {
-    return schema.every((key) => objectKeys.has(key));
+    return schema.every((key) => objectKeys.has(key))
   }
 
   // If we proceed past this block, keys match and we should recurse on
   // available schema children.
-  const schemaEntries = Object.entries(schema._);
+  const schemaEntries = Object.entries(schema._)
   const keysMatch =
     schemaEntries.every(([key]) => objectKeys.has(key)) &&
     // If exact is set, verify number of entries equals the expected.
-    (!schema.exact || schemaEntries.length === objectKeys.size);
+    (!schema.exact || schemaEntries.length === objectKeys.size)
   if (!keysMatch) {
-    return false;
+    return false
   }
 
   return schemaEntries.every(
@@ -42,7 +45,7 @@ export const objectKeyLayoutMatchesSchema = (
       (!Array.isArray(schema) && Object.keys(schema).length === 0) ||
       // Recurse, first verifying the value of the key in the object is an
       // object.
-      (typeof object[child] === "object" &&
+      (typeof object[child] === 'object' &&
         !Array.isArray(object[child]) &&
         // typeof null === 'object', so verify this is not null before checking
         // its internal keys.
@@ -51,5 +54,5 @@ export const objectKeyLayoutMatchesSchema = (
           object[child] as Record<string, unknown>,
           schema as ObjectMatchSchema
         ))
-  );
-};
+  )
+}

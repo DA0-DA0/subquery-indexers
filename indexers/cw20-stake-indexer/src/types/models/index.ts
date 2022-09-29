@@ -2,7 +2,6 @@
 
 // Auto-generated , DO NOT EDIT
 
-export {Snapshot} from "./Snapshot"
+export { Snapshot } from './Snapshot'
 
-export {Balance} from "./Balance"
-
+export { Balance } from './Balance'
