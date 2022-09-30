@@ -1,3 +1,8 @@
 FROM onfinality/subql-query:v1.5.0
 
-CMD ["--name=app", "--playground", "--indexer=http://subquery-node:3000"]
+RUN apk add --no-cache curl
+RUN apk add --no-cache postgresql-client
+
+COPY init.sh /usr/local/bin
+
+ENTRYPOINT [ "/usr/local/bin/init.sh" ]

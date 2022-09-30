@@ -39,13 +39,14 @@ services:
       - service: postgres
 
   subquery-node:
-    image: noahsaso/subql-node-cosmos:v1.10.2-1
+    image: noahsaso/subql-node-cosmos:v1.10.2-7
     expose:
       - port: 3000
         to:
           - service: graphql-engine
     depends_on:
       - service: postgres
+      - service: cron
     env:
       - DB_USER=postgres
       - DB_PASS={{dbPassword}}
@@ -57,7 +58,7 @@ services:
       - PROJECT_ZIP_URL={{zipUrl}}
 
   graphql-engine:
-    image: noahsaso/subql-query:v1.5.0-1
+    image: noahsaso/subql-query:v1.5.0-7
     expose:
       - port: 3000
         to:
