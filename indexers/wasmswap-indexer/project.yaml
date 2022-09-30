@@ -16,12 +16,12 @@ schema:
 
 network:
   chainId: juno-1
-  endpoint: https://juno.api.onfinality.io/public
+  endpoint: https://rpc.juno.pupmos.network:443/
   dictionary: https://api.subquery.network/sq/subquery/cosmos-juno-dictionary
 
 dataSources:
   - kind: cosmos/Runtime
-    startBlock: 4415041
+    startBlock: 4136532 # pupmos first block
     mapping:
       file: "./dist/index.js"
       handlers:
