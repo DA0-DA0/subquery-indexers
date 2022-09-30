@@ -26,55 +26,58 @@ const spawn = async (cmd: string) =>
     })
   })
 
-const CHARS =
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@$%^&*()[]-_+[]{};:,.<>'
-const randomPassword = (length = 32) =>
-  [...Array(length)]
-    .map(() => CHARS[Math.floor(Math.random() * CHARS.length)])
-    .join('')
+// const CHARS =
+//   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@$%^&*()[]-_+[]{};:,.<>'
+// const randomPassword = (length = 32) =>
+//   [...Array(length)]
+//     .map(() => CHARS[Math.floor(Math.random() * CHARS.length)])
+//     .join('')
 
 const main = async () => {
   if (process.argv.length !== 3) {
-    throw new Error('SYNTAX: yarn akashify <indexer folder>')
+    throw new Error('SYNTAX: yarn containerify <indexer folder>')
   }
 
-  const deployYmlTemplate = path.join(__dirname, './deploy-akash.template.yml')
-  if (!fs.existsSync(deployYmlTemplate)) {
-    throw new Error(`${deployYmlTemplate} not found.`)
-  }
-  const dockerComposeYmlTemplate = path.join(
+  const akashDeployTemplate = path.join(
     __dirname,
-    './docker-compose.akash-local.template.yml'
+    './akash.deploy.template.yml'
   )
-  if (!fs.existsSync(dockerComposeYmlTemplate)) {
-    throw new Error(`${dockerComposeYmlTemplate} not found.`)
+  if (!fs.existsSync(akashDeployTemplate)) {
+    throw new Error(`${akashDeployTemplate} not found.`)
+  }
+  const dockerComposeDeployTemplate = path.join(
+    __dirname,
+    './docker-compose.deploy.template.yml'
+  )
+  if (!fs.existsSync(dockerComposeDeployTemplate)) {
+    throw new Error(`${dockerComposeDeployTemplate} not found.`)
   }
 
   // Import env variables from .env.
   dotenv.config({ path: path.join(__dirname, '.env') })
 
   const NFT_STORAGE_API_KEY = process.env.NFT_STORAGE_API_KEY
-  const BACKUP_BUCKET = process.env.BACKUP_BUCKET
-  const BACKUP_KEY = process.env.BACKUP_KEY
-  const BACKUP_SECRET = process.env.BACKUP_SECRET
-  const BACKUP_ENCRYPTION_PASSPHRASE = process.env.BACKUP_ENCRYPTION_PASSPHRASE
-  const BACKUP_HOST = process.env.BACKUP_HOST
-  const BACKUP_SCHEDULE = process.env.BACKUP_SCHEDULE
-  const BACKUP_RETAIN = process.env.BACKUP_RETAIN
+  // const BACKUP_BUCKET = process.env.BACKUP_BUCKET
+  // const BACKUP_KEY = process.env.BACKUP_KEY
+  // const BACKUP_SECRET = process.env.BACKUP_SECRET
+  // const BACKUP_ENCRYPTION_PASSPHRASE = process.env.BACKUP_ENCRYPTION_PASSPHRASE
+  // const BACKUP_HOST = process.env.BACKUP_HOST
+  // const BACKUP_SCHEDULE = process.env.BACKUP_SCHEDULE
+  // const BACKUP_RETAIN = process.env.BACKUP_RETAIN
   const IPFS_HTTPS_URL_TEMPLATE = process.env.IPFS_HTTPS_URL_TEMPLATE
-  const ACCEPT_HOST_SUFFIX = process.env.ACCEPT_HOST_SUFFIX
+  // const ACCEPT_HOST_SUFFIX = process.env.ACCEPT_HOST_SUFFIX
 
   if (
     !NFT_STORAGE_API_KEY ||
-    !BACKUP_BUCKET ||
-    !BACKUP_KEY ||
-    !BACKUP_SECRET ||
-    !BACKUP_ENCRYPTION_PASSPHRASE ||
-    !BACKUP_HOST ||
-    !BACKUP_SCHEDULE ||
-    !BACKUP_RETAIN ||
-    !IPFS_HTTPS_URL_TEMPLATE ||
-    !ACCEPT_HOST_SUFFIX
+    //   !BACKUP_BUCKET ||
+    //   !BACKUP_KEY ||
+    //   !BACKUP_SECRET ||
+    //   !BACKUP_ENCRYPTION_PASSPHRASE ||
+    //   !BACKUP_HOST ||
+    //   !BACKUP_SCHEDULE ||
+    //   !BACKUP_RETAIN ||
+    !IPFS_HTTPS_URL_TEMPLATE
+    //   !ACCEPT_HOST_SUFFIX
   ) {
     throw new Error('Incomplete environment variables.')
   }
@@ -132,42 +135,47 @@ const main = async () => {
   console.log(`Uploaded to IPFS with CID ${cid}`)
 
   // Generate akash deploy yml.
-  const dbPassword = randomPassword()
+  // const dbPassword = randomPassword()
   const zipUrl = IPFS_HTTPS_URL_TEMPLATE.replace('{{cid}}', cid)
-  const acceptHost = indexer + ACCEPT_HOST_SUFFIX
+  // const acceptHost = indexer + ACCEPT_HOST_SUFFIX
 
-  const deployYmlContent = await renderFile(deployYmlTemplate, {
-    dbPassword,
-    zipUrl,
-    acceptHost,
-    backup: {
-      bucket: BACKUP_BUCKET,
-      folder: indexer,
-      key: BACKUP_KEY,
-      secret: BACKUP_SECRET,
-      encryptionPassphrase: BACKUP_ENCRYPTION_PASSPHRASE,
-      host: BACKUP_HOST,
-      schedule: BACKUP_SCHEDULE,
-      retain: BACKUP_RETAIN,
-    },
-  })
+  // const akashDeployContent = await renderFile(akashDeployTemplate, {
+  //   dbPassword,
+  //   zipUrl,
+  //   acceptHost,
+  //   backup: {
+  //     bucket: BACKUP_BUCKET,
+  //     folder: indexer,
+  //     key: BACKUP_KEY,
+  //     secret: BACKUP_SECRET,
+  //     encryptionPassphrase: BACKUP_ENCRYPTION_PASSPHRASE,
+  //     host: BACKUP_HOST,
+  //     schedule: BACKUP_SCHEDULE,
+  //     retain: BACKUP_RETAIN,
+  //   },
+  // })
 
-  const deployYmlPath = path.join(
-    indexerPath,
-    `deploy_${indexer}_${Date.now()}.yml`
+  const now = Date.now()
+
+  // const akashDeployPath = path.join(
+  //   indexerPath,
+  //   `akash.deploy_${indexer}_${now}.yml`
+  // )
+  // fs.writeFileSync(akashDeployPath, akashDeployContent)
+  // console.log(`Saved ${akashDeployPath}`)
+
+  const dockerComposeDeployContent = await renderFile(
+    dockerComposeDeployTemplate,
+    {
+      zipUrl,
+    }
   )
-  fs.writeFileSync(deployYmlPath, deployYmlContent)
-
-  const dockerComposeYmlContent = await renderFile(dockerComposeYmlTemplate, {
-    zipUrl,
-  })
-  const dockerComposeYmlPath = path.join(
+  const dockerComposeDeployPath = path.join(
     indexerPath,
-    `docker-compose.akash-local.yml`
+    `docker-compose.deploy_${indexer}_${now}.yml`
   )
-  fs.writeFileSync(dockerComposeYmlPath, dockerComposeYmlContent)
-
-  console.log(`Saved deploy yml to ${deployYmlPath}`)
+  fs.writeFileSync(dockerComposeDeployPath, dockerComposeDeployContent)
+  console.log(`Saved ${dockerComposeDeployPath}`)
 }
 
 main().catch((err) => {

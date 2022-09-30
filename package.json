@@ -6,7 +6,7 @@
   "license": "BSD 3-Clause Clear",
   "private": true,
   "scripts": {
-    "akashify": "yarn workspace akashify run run",
+    "containerify": "yarn workspace containerify run run",
     "lint": "yarn workspaces foreach -ipv run lint",
     "format": "yarn workspaces foreach -ipv run format",
     "test": "yarn workspaces foreach -ipv run test"

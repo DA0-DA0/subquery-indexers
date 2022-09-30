@@ -3108,22 +3108,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"akashify@workspace:packages/akashify":
-  version: 0.0.0-use.local
-  resolution: "akashify@workspace:packages/akashify"
-  dependencies:
-    "@subql/types-cosmos": ^0.1.0
-    "@types/adm-zip": ^0.5.0
-    adm-zip: ^0.5.9
-    dotenv: ^16.0.3
-    eslint: ^8.23.1
-    nft.storage: ^7.0.0
-    template-file: ^6.0.1
-    ts-node: ^10.9.1
-    typescript: ^4.8.4
-  languageName: unknown
-  linkType: soft
-
 "algo-msgpack-with-bigint@npm:^2.1.1":
   version: 2.1.1
   resolution: "algo-msgpack-with-bigint@npm:2.1.1"
@@ -4380,6 +4364,22 @@ __metadata:
   checksum: 8755d76787f94e6cf79ce4666f0c5519906d7f5b02d4b884cf41e11dcd759ed69c57da0670afd9236d229a46e0f9cf519db0cd829c6dca820bb5a5c3def584ed
   languageName: node
   linkType: hard
+
+"containerify@workspace:packages/containerify":
+  version: 0.0.0-use.local
+  resolution: "containerify@workspace:packages/containerify"
+  dependencies:
+    "@subql/types-cosmos": ^0.1.0
+    "@types/adm-zip": ^0.5.0
+    adm-zip: ^0.5.9
+    dotenv: ^16.0.3
+    eslint: ^8.23.1
+    nft.storage: ^7.0.0
+    template-file: ^6.0.1
+    ts-node: ^10.9.1
+    typescript: ^4.8.4
+  languageName: unknown
+  linkType: soft
 
 "content-type@npm:^1.0.4":
   version: 1.0.4

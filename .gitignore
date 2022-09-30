@@ -3,7 +3,7 @@
 node_modules
 dist
 
-# Akashify
+# Containerify
 .env
-deploy_*.yml
-docker-compose.akash-local.yml
+akash.deploy_*.yml
+docker-compose.deploy_*.yml

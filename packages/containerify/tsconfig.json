@@ -10,6 +10,6 @@
     "rootDir": ".",
     "target": "es2017"
   },
-  "include": ["./akashify.ts"],
+  "include": ["./containerify.ts"],
   "exclude": ["node_modules"]
 }
