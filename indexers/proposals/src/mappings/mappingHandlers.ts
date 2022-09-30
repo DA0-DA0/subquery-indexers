@@ -73,7 +73,6 @@ const updateOrCreateAndGetProposal = async (
               },
             },
           },
-          exact: true,
         })
       ) {
         throw new Error(
