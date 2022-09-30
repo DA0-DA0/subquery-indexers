@@ -27,7 +27,7 @@ const spawn = async (cmd: string) =>
   })
 
 const CHARS =
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()[]-_+[]{};:,.<>'
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@$%^&*()[]-_+[]{};:,.<>'
 const randomPassword = (length = 32) =>
   [...Array(length)]
     .map(() => CHARS[Math.floor(Math.random() * CHARS.length)])
