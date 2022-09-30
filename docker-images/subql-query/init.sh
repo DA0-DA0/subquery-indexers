@@ -1,16 +1,13 @@
 #!/bin/sh
 
-# wait for subquery-node to start
+# wait for subquery-node to start, who waits for postgres to start
 while ! curl --silent --fail http://subquery-node:3000/ready; do
   echo >&2 'Waiting for subquery-node, retrying in 5s...'
   sleep 5
 done
 
-# wait for postgres to start
-while ! pg_isready -q -d "$DB_DATABASE" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" ; do
-  echo >&2 'Waiting for postgres, retrying in 5s...'
-  sleep 5
-done
+echo "------- Sleeping for 10 more seconds to let server be fully started..."
+sleep 10
 
 # run tini as subreaper since this init.sh is PID 1
 export TINI_SUBREAPER=1

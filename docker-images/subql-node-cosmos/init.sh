@@ -11,7 +11,9 @@ cd /tmp
 wget "$PROJECT_ZIP_URL" -O app.zip
 unzip app.zip -d /app
 rm app.zip
-echo "------- Downloaded project zip url."
+
+echo "------- Sleeping for 20 more seconds to let DB be restored..."
+sleep 20
 
 # run tini as subreaper since this init.sh is PID 1
 export TINI_SUBREAPER=1
