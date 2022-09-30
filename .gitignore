@@ -1,6 +1,7 @@
 .yarn
 .data
 node_modules
+dist
 
 # Akashify
 .env

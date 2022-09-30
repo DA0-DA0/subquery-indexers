@@ -1,7 +1,7 @@
 // Auto-generated , DO NOT EDIT
 import assert from 'assert'
 
-import { Entity, FunctionPropertyNames } from '@subql/types'
+import { Entity, FunctionPropertyNames } from '@subql/types-cosmos'
 
 type WasmswapProps = Omit<
   Wasmswap,

@@ -100,11 +100,13 @@ const main = async () => {
   }
   // Codegen.
   if (
-    !(await spawn('npx subql codegen')) &&
+    !(await spawn('npx subql codegen')) ||
     // Codegen imports from the wrong package, rip.
     !(await spawn(
       "npx replace-in-files --string '@subql/types' --replacement '@subql/types-cosmos' src/types/models/*"
-    ))
+    )) ||
+    // Format the codegen output.
+    !(await spawn('yarn format'))
   ) {
     throw new Error('Failed to generate types.')
   }
