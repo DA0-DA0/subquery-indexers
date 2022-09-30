@@ -61,6 +61,8 @@ services:
     image: noahsaso/subql-query:v1.5.0-10
     expose:
       - port: 3000
+        accept:
+          - {{acceptHost}}
         to:
           - global: true
     depends_on:

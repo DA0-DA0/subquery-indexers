@@ -62,6 +62,7 @@ const main = async () => {
   const BACKUP_SCHEDULE = process.env.BACKUP_SCHEDULE
   const BACKUP_RETAIN = process.env.BACKUP_RETAIN
   const IPFS_HTTPS_URL_TEMPLATE = process.env.IPFS_HTTPS_URL_TEMPLATE
+  const ACCEPT_HOST_SUFFIX = process.env.ACCEPT_HOST_SUFFIX
 
   if (
     !NFT_STORAGE_API_KEY ||
@@ -72,7 +73,8 @@ const main = async () => {
     !BACKUP_HOST ||
     !BACKUP_SCHEDULE ||
     !BACKUP_RETAIN ||
-    !IPFS_HTTPS_URL_TEMPLATE
+    !IPFS_HTTPS_URL_TEMPLATE ||
+    !ACCEPT_HOST_SUFFIX
   ) {
     throw new Error('Incomplete environment variables.')
   }
@@ -131,12 +133,13 @@ const main = async () => {
 
   // Generate akash deploy yml.
   const dbPassword = randomPassword()
-
   const zipUrl = IPFS_HTTPS_URL_TEMPLATE.replace('{{cid}}', cid)
+  const acceptHost = indexer + ACCEPT_HOST_SUFFIX
 
   const deployYmlContent = await renderFile(deployYmlTemplate, {
     dbPassword,
     zipUrl,
+    acceptHost,
     backup: {
       bucket: BACKUP_BUCKET,
       folder: indexer,
