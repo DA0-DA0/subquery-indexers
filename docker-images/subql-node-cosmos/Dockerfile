@@ -1,4 +1,4 @@
-FROM onfinality/subql-node-cosmos:v1.9.1
+FROM onfinality/subql-node-cosmos:v1.10.2
 
 COPY init.sh /usr/local/bin
 

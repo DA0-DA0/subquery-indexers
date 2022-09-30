@@ -39,7 +39,7 @@ services:
       - service: postgres
 
   subquery-node:
-    image: noahsaso/subql-node-cosmos-v1.9.1:v1
+    image: noahsaso/subql-node-cosmos:v1.10.2-1
     expose:
       - port: 3000
         to:
@@ -57,7 +57,7 @@ services:
       - PROJECT_ZIP_URL={{zipUrl}}
 
   graphql-engine:
-    image: noahsaso/subql-query-v1.5.0:v1
+    image: noahsaso/subql-query:v1.5.0-1
     expose:
       - port: 3000
         to:
