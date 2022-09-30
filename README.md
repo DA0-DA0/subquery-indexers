@@ -1,6 +1,7 @@
 # subquery-indexers
 
-Indexers built with SubQuery to support DAO DAO frontend and API needs.
+Indexers built with [SubQuery](https://subquery.network/) to support [DAO
+DAO](https://daodao.zone/) frontend and API needs.
 
 ## Akashify
 
