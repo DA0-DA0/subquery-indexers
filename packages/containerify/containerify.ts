@@ -34,8 +34,8 @@ const randomPassword = (length = 32) =>
     .join('')
 
 const main = async () => {
-  if (process.argv.length !== 3) {
-    throw new Error('SYNTAX: yarn containerify <indexer folder>')
+  if (process.argv.length !== 4) {
+    throw new Error('SYNTAX: yarn containerify <indexer folder> <indexer port>')
   }
 
   // const akashDeployTemplate = path.join(
@@ -97,6 +97,7 @@ const main = async () => {
   if (!fs.existsSync(indexerPath)) {
     throw new Error(`${indexerPath} not found.`)
   }
+  const indexerPort = process.argv[3]
   // Switch current working directory to indexer path so we can execute scripts cleanly.
   process.chdir(indexerPath)
 
@@ -169,6 +170,7 @@ const main = async () => {
     await renderFile(dockerComposeDeployTemplate, {
       dbPassword,
       zipUrl,
+      port: indexerPort,
       backup: {
         bucket: BACKUP_BUCKET,
         folder: indexer,

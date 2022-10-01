@@ -21,7 +21,7 @@ mentioned above.
 Once the environment is ready, run:
 
 ```sh
-yarn containerify <indexer folder>
+yarn containerify <indexer folder> <indexer port>
 ```
 
 It will output two files in the specified indexer folder:
