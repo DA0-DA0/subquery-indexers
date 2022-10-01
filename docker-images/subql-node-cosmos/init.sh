@@ -2,7 +2,8 @@
 
 echo "------- Downloading project zip url..."
 cd /tmp
-wget "$PROJECT_ZIP_URL" -O app.zip
+# timeout after 10 seconds, retrying 5 times
+wget "$PROJECT_ZIP_URL" -O app.zip -t 5 -T 10
 unzip app.zip -d /app
 rm app.zip
 
