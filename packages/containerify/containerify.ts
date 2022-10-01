@@ -26,25 +26,26 @@ const spawn = async (cmd: string) =>
     })
   })
 
-// const CHARS =
-//   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@$%^&*()[]-_+[]{};:,.<>'
-// const randomPassword = (length = 32) =>
-//   [...Array(length)]
-//     .map(() => CHARS[Math.floor(Math.random() * CHARS.length)])
-//     .join('')
+const CHARS =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@$%^&*()-_+[]{};:,.<>'
+const randomPassword = (length = 32) =>
+  [...Array(length)]
+    .map(() => CHARS[Math.floor(Math.random() * CHARS.length)])
+    .join('')
 
 const main = async () => {
   if (process.argv.length !== 3) {
     throw new Error('SYNTAX: yarn containerify <indexer folder>')
   }
 
-  const akashDeployTemplate = path.join(
-    __dirname,
-    './akash.deploy.template.yml'
-  )
-  if (!fs.existsSync(akashDeployTemplate)) {
-    throw new Error(`${akashDeployTemplate} not found.`)
-  }
+  // const akashDeployTemplate = path.join(
+  //   __dirname,
+  //   './akash.deploy.template.yml'
+  // )
+  // if (!fs.existsSync(akashDeployTemplate)) {
+  //   throw new Error(`${akashDeployTemplate} not found.`)
+  // }
+
   const dockerComposeDeployTemplate = path.join(
     __dirname,
     './docker-compose.deploy.template.yml'
@@ -57,25 +58,25 @@ const main = async () => {
   dotenv.config({ path: path.join(__dirname, '.env') })
 
   const NFT_STORAGE_API_KEY = process.env.NFT_STORAGE_API_KEY
-  // const BACKUP_BUCKET = process.env.BACKUP_BUCKET
-  // const BACKUP_KEY = process.env.BACKUP_KEY
-  // const BACKUP_SECRET = process.env.BACKUP_SECRET
-  // const BACKUP_ENCRYPTION_PASSPHRASE = process.env.BACKUP_ENCRYPTION_PASSPHRASE
-  // const BACKUP_HOST = process.env.BACKUP_HOST
-  // const BACKUP_SCHEDULE = process.env.BACKUP_SCHEDULE
-  // const BACKUP_RETAIN = process.env.BACKUP_RETAIN
+  const BACKUP_BUCKET = process.env.BACKUP_BUCKET
+  const BACKUP_KEY = process.env.BACKUP_KEY
+  const BACKUP_SECRET = process.env.BACKUP_SECRET
+  const BACKUP_ENCRYPTION_PASSPHRASE = process.env.BACKUP_ENCRYPTION_PASSPHRASE
+  const BACKUP_HOST = process.env.BACKUP_HOST
+  const BACKUP_SCHEDULE = process.env.BACKUP_SCHEDULE
+  const BACKUP_RETAIN = process.env.BACKUP_RETAIN
   const IPFS_HTTPS_URL_TEMPLATE = process.env.IPFS_HTTPS_URL_TEMPLATE
   // const ACCEPT_HOST_SUFFIX = process.env.ACCEPT_HOST_SUFFIX
 
   if (
     !NFT_STORAGE_API_KEY ||
-    //   !BACKUP_BUCKET ||
-    //   !BACKUP_KEY ||
-    //   !BACKUP_SECRET ||
-    //   !BACKUP_ENCRYPTION_PASSPHRASE ||
-    //   !BACKUP_HOST ||
-    //   !BACKUP_SCHEDULE ||
-    //   !BACKUP_RETAIN ||
+    !BACKUP_BUCKET ||
+    !BACKUP_KEY ||
+    !BACKUP_SECRET ||
+    !BACKUP_ENCRYPTION_PASSPHRASE ||
+    !BACKUP_HOST ||
+    !BACKUP_SCHEDULE ||
+    !BACKUP_RETAIN ||
     !IPFS_HTTPS_URL_TEMPLATE
     //   !ACCEPT_HOST_SUFFIX
   ) {
@@ -134,8 +135,8 @@ const main = async () => {
   const cid = await nftStorage.storeBlob(new Blob([zipBuffer]))
   console.log(`Uploaded to IPFS with CID ${cid}`)
 
-  // Generate akash deploy yml.
-  // const dbPassword = randomPassword()
+  // Generate deploy yml files.
+  const dbPassword = randomPassword()
   const zipUrl = IPFS_HTTPS_URL_TEMPLATE.replace('{{cid}}', cid)
   // const acceptHost = indexer + ACCEPT_HOST_SUFFIX
 
@@ -164,12 +165,28 @@ const main = async () => {
   // fs.writeFileSync(akashDeployPath, akashDeployContent)
   // console.log(`Saved ${akashDeployPath}`)
 
-  const dockerComposeDeployContent = await renderFile(
-    dockerComposeDeployTemplate,
-    {
+  const dockerComposeDeployContent = (
+    await renderFile(dockerComposeDeployTemplate, {
+      dbPassword,
       zipUrl,
-    }
+      backup: {
+        bucket: BACKUP_BUCKET,
+        folder: indexer,
+        key: BACKUP_KEY,
+        secret: BACKUP_SECRET,
+        encryptionPassphrase: BACKUP_ENCRYPTION_PASSPHRASE,
+        host: BACKUP_HOST,
+        schedule: BACKUP_SCHEDULE,
+        retain: BACKUP_RETAIN,
+      },
+    })
   )
+    // Escape dollar signs since docker compose yml files use it for variable
+    // substitution by replacing each single dollar sign with two dollar signs.
+    // Also double dollar sign is a special pattern in the JS string replace
+    // function that inserts a single dollar sign, so we need to use four dollar
+    // signs here to make two. Jeez.
+    .replace(/\$/g, '$$$$')
   const dockerComposeDeployPath = path.join(
     indexerPath,
     `docker-compose.deploy_${indexer}_${now}.yml`

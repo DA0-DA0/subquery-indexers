@@ -2,6 +2,7 @@
 .data
 node_modules
 dist
+cloudflare-origin
 
 # Containerify
 .env

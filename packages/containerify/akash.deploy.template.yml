@@ -1,52 +1,38 @@
-version: "2.0"
+version: '2.0'
 
 services:
   postgres:
-    image: noahsaso/subql-postgres:v1
+    image: noahsaso/subql-postgres:12-v2
     expose:
       - port: 5432
         to:
           - service: subquery-node
           - service: graphql-engine
-          - service: cron
     env:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD={{dbPassword}}
+      - POSTGRES_DATABASE=postgres
+      - BACKUP_PATH={{backup.bucket}}/{{backup.folder}}
+      - BACKUP_KEY={{backup.key}}
+      - BACKUP_SECRET={{backup.secret}}
+      - BACKUP_PASSPHRASE={{backup.encryptionPassphrase}}
+      - BACKUP_HOST={{backup.host}}
+      - BACKUP_SCHEDULE={{backup.schedule}}
+      - BACKUP_RETAIN={{backup.retain}}
     # uncomment when persistent storage works
     # params:
     #   storage:
     #     data:
     #       mount: /var/lib/postgresql/data
 
-  cron:
-    image: ghcr.io/ovrclk/akash-postgres-restore:v0.0.4
-    env:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD={{dbPassword}}
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DATABASE=postgres
-      - BACKUP_PATH={{backup.bucket}}/{{backup.folder}}
-      # get these from s3 bucket provider
-      - BACKUP_KEY={{backup.key}}
-      - BACKUP_SECRET={{backup.secret}}
-      - BACKUP_PASSPHRASE={{backup.encryptionPassphrase}}
-      - BACKUP_HOST={{backup.host}}
-      # every 15 minutes
-      - BACKUP_SCHEDULE={{backup.schedule}}
-      - BACKUP_RETAIN={{backup.retain}}
-    depends_on:
-      - service: postgres
-
   subquery-node:
-    image: noahsaso/subql-node-cosmos:v1.10.2-10
+    image: noahsaso/subql-node-cosmos:v1.10.2-13
     expose:
       - port: 3000
         to:
           - service: graphql-engine
     depends_on:
       - service: postgres
-      - service: cron
     env:
       - DB_USER=postgres
       - DB_PASS={{dbPassword}}
@@ -58,11 +44,11 @@ services:
       - PROJECT_ZIP_URL={{zipUrl}}
 
   graphql-engine:
-    image: noahsaso/subql-query:v1.5.0-10
+    image: noahsaso/subql-query:v1.5.0-13
     expose:
       - port: 3000
         accept:
-          - {{acceptHost}}
+          - { { acceptHost } }
         to:
           - global: true
     depends_on:
@@ -74,6 +60,7 @@ services:
       - DB_DATABASE=postgres
       - DB_HOST=postgres
       - DB_PORT=5432
+      - SUBQUERY_NODE_URL_BASE=http://subquery-node:3000
 
 profiles:
   compute:
@@ -93,14 +80,6 @@ profiles:
         #     attributes:
         #       persistent: true
         #       class: beta2
-    cron:
-      resources:
-        cpu:
-          units: 1
-        memory:
-          size: 1Gi
-        storage:
-          size: 1Gi
     subquery-node:
       resources:
         cpu:
@@ -127,9 +106,6 @@ profiles:
         postgres:
           denom: uakt
           amount: 500
-        cron:
-          denom: uakt
-          amount: 500
         subquery-node:
           denom: uakt
           amount: 500
@@ -141,10 +117,6 @@ deployment:
   postgres:
     akash:
       profile: postgres
-      count: 1
-  cron:
-    akash:
-      profile: cron
       count: 1
   subquery-node:
     akash:

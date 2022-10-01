@@ -1,0 +1,2 @@
+SHELL=/bin/bash
+${BACKUP_SCHEDULE} /scripts/backup.sh > /proc/1/fd/1 2>&1
