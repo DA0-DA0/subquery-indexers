@@ -1,6 +1,3 @@
-# This file exists to locally test run projects in docker-compose before
-# deploying them to akash. Useful for debugging if something weird is happening.
-
 version: '3'
 
 services:
