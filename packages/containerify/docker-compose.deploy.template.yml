@@ -23,7 +23,7 @@ services:
       retries: 5
 
   subquery-node:
-    image: noahsaso/subql-node-cosmos:v1.10.2-14
+    image: noahsaso/subql-node-cosmos:v1.10.2-15
     depends_on:
       "postgres":
         condition: service_healthy
@@ -42,7 +42,7 @@ services:
       retries: 10
 
   graphql-engine:
-    image: noahsaso/subql-query:v1.5.0-14
+    image: noahsaso/subql-query:v1.5.0-15
     ports:
       - {{port}}:3000
     depends_on:

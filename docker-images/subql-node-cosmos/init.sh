@@ -4,8 +4,7 @@ echo "------- Downloading project zip url..."
 cd /tmp
 # timeout after 10 seconds, retrying 5 times
 wget "$PROJECT_ZIP_URL" -O app.zip -t 5 -T 10
-unzip app.zip -d /app
-rm app.zip
+unzip -o -d /app app.zip
 
 # wait for postgres to start
 while ! pg_isready -q -d "$DB_DATABASE" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" ; do
