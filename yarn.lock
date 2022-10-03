@@ -4452,9 +4452,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cw20-stake-indexer@workspace:indexers/cw20-stake-indexer":
+"cw20-stake@workspace:indexers/cw20-stake":
   version: 0.0.0-use.local
-  resolution: "cw20-stake-indexer@workspace:indexers/cw20-stake-indexer"
+  resolution: "cw20-stake@workspace:indexers/cw20-stake"
   dependencies:
     "@cosmjs/stargate": ^0.28.9
     "@subql/cli": ^1.1.0
@@ -11873,9 +11873,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wasmswap-indexer@workspace:indexers/wasmswap-indexer":
+"wasmswap@workspace:indexers/wasmswap":
   version: 0.0.0-use.local
-  resolution: "wasmswap-indexer@workspace:indexers/wasmswap-indexer"
+  resolution: "wasmswap@workspace:indexers/wasmswap"
   dependencies:
     "@cosmjs/stargate": ^0.28.9
     "@subql/cli": ^1.1.0
