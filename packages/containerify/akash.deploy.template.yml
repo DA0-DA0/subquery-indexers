@@ -2,7 +2,7 @@ version: '2.0'
 
 services:
   postgres:
-    image: noahsaso/subql-postgres:12-v2
+    image: noahsaso/subql-postgres:12-v5
     expose:
       - port: 5432
         to:

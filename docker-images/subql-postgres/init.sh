@@ -14,5 +14,8 @@ crontab /etc/cron.d/scheduler
 cron
 echo "[init] Cron started"
 
+# Background script to ensure password set correctly (waits for DB to start).
+/scripts/password.sh &
+
 # Start postgres.
 docker-entrypoint.sh postgres
