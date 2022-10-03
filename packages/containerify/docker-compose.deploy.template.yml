@@ -1,0 +1,61 @@
+version: '3'
+
+services:
+  postgres:
+    image: noahsaso/subql-postgres:12-v6
+    volumes:
+      - .data/postgres:/var/lib/postgresql/data
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "{{dbPassword}}"
+      POSTGRES_DATABASE: postgres
+      BACKUP_PATH: "{{backup.bucket}}/{{backup.folder}}"
+      BACKUP_KEY: "{{backup.key}}"
+      BACKUP_SECRET: "{{backup.secret}}"
+      BACKUP_PASSPHRASE: "{{backup.encryptionPassphrase}}"
+      BACKUP_HOST: "{{backup.host}}"
+      BACKUP_SCHEDULE: "{{backup.schedule}}"
+      BACKUP_RETAIN: "{{backup.retain}}"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  subquery-node:
+    image: noahsaso/subql-node-cosmos:v1.10.2-15
+    depends_on:
+      "postgres":
+        condition: service_healthy
+    restart: always
+    environment:
+      DB_USER: postgres
+      DB_PASS: "{{dbPassword}}"
+      DB_DATABASE: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+      PROJECT_ZIP_URL: {{zipUrl}}
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://subquery-node:3000/ready" ]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  graphql-engine:
+    image: noahsaso/subql-query:v1.5.0-15
+    ports:
+      - 127.0.0.1:{{port}}:3000
+    depends_on:
+      "postgres":
+        condition: service_healthy
+      "subquery-node":
+        condition: service_started
+    restart: always
+    environment:
+      DB_USER: postgres
+      DB_PASS: "{{dbPassword}}"
+      DB_DATABASE: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+      SUBQUERY_NODE_URL_BASE: http://subquery-node:3000

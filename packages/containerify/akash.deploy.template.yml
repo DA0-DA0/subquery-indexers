@@ -1,0 +1,128 @@
+version: '2.0'
+
+services:
+  postgres:
+    image: noahsaso/subql-postgres:12-v6
+    expose:
+      - port: 5432
+        to:
+          - service: subquery-node
+          - service: graphql-engine
+    env:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD={{dbPassword}}
+      - POSTGRES_DATABASE=postgres
+      - BACKUP_PATH={{backup.bucket}}/{{backup.folder}}
+      - BACKUP_KEY={{backup.key}}
+      - BACKUP_SECRET={{backup.secret}}
+      - BACKUP_PASSPHRASE={{backup.encryptionPassphrase}}
+      - BACKUP_HOST={{backup.host}}
+      - BACKUP_SCHEDULE={{backup.schedule}}
+      - BACKUP_RETAIN={{backup.retain}}
+    # uncomment when persistent storage works
+    # params:
+    #   storage:
+    #     data:
+    #       mount: /var/lib/postgresql/data
+
+  subquery-node:
+    image: noahsaso/subql-node-cosmos:v1.10.2-15
+    expose:
+      - port: 3000
+        to:
+          - service: graphql-engine
+    depends_on:
+      - service: postgres
+    env:
+      - DB_USER=postgres
+      - DB_PASS={{dbPassword}}
+      - DB_DATABASE=postgres
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      # zip must contain dist (from npm run codegen && npm run build),
+      # project.yaml, and schema.graphql
+      - PROJECT_ZIP_URL={{zipUrl}}
+
+  graphql-engine:
+    image: noahsaso/subql-query:v1.5.0-15
+    expose:
+      - port: 3000
+        accept:
+          - { { acceptHost } }
+        to:
+          - global: true
+    depends_on:
+      - service: postgres
+      - service: subquery-node
+    env:
+      - DB_USER=postgres
+      - DB_PASS={{dbPassword}}
+      - DB_DATABASE=postgres
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - SUBQUERY_NODE_URL_BASE=http://subquery-node:3000
+
+profiles:
+  compute:
+    postgres:
+      resources:
+        cpu:
+          units: 1
+        memory:
+          size: 1Gi
+        storage:
+          size: 1Gi
+        # replace above storage key with below when persistent storage works
+        # storage:
+        #   - size: 1Gi
+        #   - name: data
+        #     size: 5Gi
+        #     attributes:
+        #       persistent: true
+        #       class: beta2
+    subquery-node:
+      resources:
+        cpu:
+          units: 1
+        memory:
+          size: 1Gi
+        storage:
+          size: 1Gi
+    graphql-engine:
+      resources:
+        cpu:
+          units: 1
+        memory:
+          size: 1Gi
+        storage:
+          size: 1Gi
+  placement:
+    akash:
+      # audited by akash
+      signedBy:
+        anyOf:
+          - akash1365yvmc4s7awdyj3n2sav7xfx76adc6dnmlx63
+      pricing:
+        postgres:
+          denom: uakt
+          amount: 500
+        subquery-node:
+          denom: uakt
+          amount: 500
+        graphql-engine:
+          denom: uakt
+          amount: 500
+
+deployment:
+  postgres:
+    akash:
+      profile: postgres
+      count: 1
+  subquery-node:
+    akash:
+      profile: subquery-node
+      count: 1
+  graphql-engine:
+    akash:
+      profile: graphql-engine
+      count: 2

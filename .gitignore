@@ -1,0 +1,13 @@
+.yarn
+.data
+node_modules
+dist
+
+# docker images
+ssl
+*.tar
+
+# Containerify
+.env
+akash.deploy_*.yml
+docker-compose.deploy_*.yml

@@ -1,0 +1,54 @@
+specVersion: 1.0.0
+name: dao-dao-proposals
+version: 0.0.1
+runner:
+  node:
+    name: "@subql/node-cosmos"
+    version: ">=0.1.0"
+  query:
+    name: "@subql/query"
+    version: "*"
+description: >-
+  Indexes DAO DAO proposal statuses and votes. Used to get timestamps for
+  proposal states as well as provide data for the inbox.
+repository: https://github.com/DA0-DA0/subquery-indexers
+schema:
+  file: ./schema.graphql
+
+network:
+  chainId: juno-1
+  # This endpoint must be a public non-pruned archive node
+  # Public nodes may be rate limited, which can affect indexing speed
+  # When developing your project we suggest getting a private API key
+  # You can get them from OnFinality for free https://app.onfinality.io
+  # https://documentation.onfinality.io/support/the-enhanced-api-service
+  endpoint: https://rpc.juno.pupmos.network:443/
+  # Optionally provide the HTTP endpoint of a full chain dictionary to speed up processing
+  dictionary: https://api.subquery.network/sq/subquery/cosmos-juno-dictionary
+
+dataSources:
+  - kind: cosmos/Runtime
+    startBlock: 4136532 # pupmos first block
+    mapping:
+      file: "./dist/index.js"
+      handlers:
+        - handler: handlePropose
+          kind: cosmos/MessageHandler
+          filter:
+            type: "/cosmwasm.wasm.v1.MsgExecuteContract"
+            contractCall: "propose"
+        - handler: handleVote
+          kind: cosmos/MessageHandler
+          filter:
+            type: "/cosmwasm.wasm.v1.MsgExecuteContract"
+            contractCall: "vote"
+        - handler: handleExecute
+          kind: cosmos/MessageHandler
+          filter:
+            type: "/cosmwasm.wasm.v1.MsgExecuteContract"
+            contractCall: "execute"
+        - handler: handleClose
+          kind: cosmos/MessageHandler
+          filter:
+            type: "/cosmwasm.wasm.v1.MsgExecuteContract"
+            contractCall: "close"
