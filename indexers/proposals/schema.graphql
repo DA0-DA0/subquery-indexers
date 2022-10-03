@@ -8,6 +8,7 @@ type Proposal @entity {
   module: ProposalModule!
   num: Int!
   open: Boolean!
+  proposer: Wallet!
   createdAt: Date! @index
   executedAt: Date @index
   closedAt: Date @index

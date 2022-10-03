@@ -59,6 +59,7 @@ const updateOrCreateAndGetProposal = async (
     // Get proposal expiration.
     let expiresAtDate: Date | undefined
     let expiresAtHeight: number | undefined
+    let proposer: string
     try {
       const response = await api.queryContractSmart(proposalModuleAddress, {
         proposal: { proposal_id: proposalNumber },
@@ -70,6 +71,7 @@ const updateOrCreateAndGetProposal = async (
             proposal: {
               _: {
                 expiration: {},
+                proposer: {},
               },
             },
           },
@@ -88,6 +90,8 @@ const updateOrCreateAndGetProposal = async (
           : undefined
       expiresAtHeight =
         'at_height' in expiration ? expiration.at_height : undefined
+
+      proposer = response.proposal.proposer
     } catch (err) {
       logger.error(
         `Error retrieving expiration for ${getProposalId(
@@ -98,11 +102,15 @@ const updateOrCreateAndGetProposal = async (
       return
     }
 
+    // Make wallet if doesn't exist.
+    const proposerWallet = await getWallet(proposer)
+
     proposal = Proposal.create({
       id: getProposalId(proposalModuleAddress, proposalNumber),
       moduleId: proposalModuleAddress,
       num: proposalNumber,
       open: shouldBeOpen,
+      proposerId: proposerWallet.id,
       expiresAtDate,
       expiresAtHeight,
       createdAt: blockDate,
