@@ -4,4 +4,4 @@
 docker load -i subql-indexers-nginx.tar
 
 # Run
-docker run --net host subql-indexers-nginx
+docker run --net host --restart unless-stopped subql-indexers-nginx
