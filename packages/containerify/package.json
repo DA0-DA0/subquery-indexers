@@ -1,0 +1,23 @@
+{
+  "name": "containerify",
+  "version": "0.0.1",
+  "description": "Script to generate Akash deploy yml files and docker compose yml files for SubQuery indexers.",
+  "license": "BSD 3-Clause Clear",
+  "scripts": {
+    "run": "ts-node ./containerify.ts",
+    "lint": "eslint .",
+    "format": "eslint . --fix"
+  },
+  "devDependencies": {
+    "@subql/types-cosmos": "^0.1.0",
+    "@types/adm-zip": "^0.5.0",
+    "adm-zip": "^0.5.9",
+    "dotenv": "^16.0.3",
+    "eslint": "^8.23.1",
+    "nft.storage": "^7.0.0",
+    "template-file": "^6.0.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.8.4"
+  },
+  "prettier": "config/prettier"
+}
