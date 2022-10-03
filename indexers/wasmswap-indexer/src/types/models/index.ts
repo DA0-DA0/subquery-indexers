@@ -4,4 +4,4 @@
 
 export { Snapshot } from './Snapshot'
 
-export { Wasmswap } from './Wasmswap'
+export { Pool } from './Pool'

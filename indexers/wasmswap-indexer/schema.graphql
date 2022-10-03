@@ -1,5 +1,4 @@
-# Stores staked balances per block height, per staking contract, per
-# address.
+# Stores staked balances per block height, per staking contract address.
 type Snapshot @entity {
   id: ID! # contract:blockheight
   contract: String! @index
@@ -9,8 +8,8 @@ type Snapshot @entity {
   token2Amount: BigInt!
 }
 
-# Stores staked balances per staking contract, per address.
-type Wasmswap @entity {
+# Stores staked balances per staking contract address.
+type Pool @entity {
   id: ID! # contract
   contract: String! @index
 

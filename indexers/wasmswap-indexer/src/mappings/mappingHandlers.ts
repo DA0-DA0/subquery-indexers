@@ -1,8 +1,8 @@
 import { Event } from '@cosmjs/stargate/build/logs'
 import { CosmosMessage } from '@subql/types-cosmos'
 
+import { Pool } from '../types/models/Pool'
 import { Snapshot } from '../types/models/Snapshot'
-import { Wasmswap } from '../types/models/Wasmswap'
 
 interface ExecuteMsg<T = any> {
   sender: string
@@ -61,8 +61,8 @@ async function handleSwapEvent(
 
   const contract = message.msg.decodedMsg.contract
 
-  let wasmswap = await Wasmswap.get(contract)
-  if (!wasmswap) {
+  let pool = await Pool.get(contract)
+  if (!pool) {
     // If we don't know anything yet, do a query against the contract.
     try {
       const { token1_reserve, token2_reserve } = (await api.queryContractSmart(
@@ -72,7 +72,7 @@ async function handleSwapEvent(
         token1_reserve: string
         token2_reserve: string
       }
-      wasmswap = Wasmswap.create({
+      pool = Pool.create({
         id: contract,
         contract: contract,
         token1Amount: BigInt(token1_reserve),
@@ -86,13 +86,13 @@ async function handleSwapEvent(
     }
   } else {
     // Just do a regular update.
-    wasmswap.token1Amount +=
+    pool.token1Amount +=
       inputToken === 'Token1' ? BigInt(inputAmount) : -BigInt(outputAmount)
-    wasmswap.token2Amount +=
+    pool.token2Amount +=
       inputToken === 'Token2' ? BigInt(inputAmount) : -BigInt(outputAmount)
   }
   try {
-    await wasmswap.save()
+    await pool.save()
   } catch (e) {
     logger.error(`failed to save wasmswap (${contract}): ${e}`)
   }
@@ -104,8 +104,8 @@ async function handleSwapEvent(
       id: snapshotId,
       contract,
       blockHeight: BigInt(blockHeight.toString()),
-      token1Amount: wasmswap.token1Amount,
-      token2Amount: wasmswap.token2Amount,
+      token1Amount: pool.token1Amount,
+      token2Amount: pool.token2Amount,
     }).save()
   } catch (e) {
     logger.error(`failed to save snapshot (${snapshotId}): ${e}`)
