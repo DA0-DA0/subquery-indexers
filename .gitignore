@@ -2,7 +2,10 @@
 .data
 node_modules
 dist
-cloudflare-origin
+
+# docker images
+ssl
+*.tar
 
 # Containerify
 .env
