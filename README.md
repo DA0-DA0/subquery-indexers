@@ -7,12 +7,14 @@ DAO](https://daodao.zone/) frontend and API needs.
 
 1. Install the latest stable yarn: https://yarnpkg.com/getting-started/install
 
-2. Add workspaces plugin:
+2. Copy `.yarnrc.yml.example` into `.yarnrc.yml`. Do not change anything.
+
+3. Add workspaces plugin:
 ```
 yarn plugin import workspace-tools
 ```
 
-3. Run yarn
+4. Run yarn
 ```
 yarn
 ```
