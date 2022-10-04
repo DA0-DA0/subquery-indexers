@@ -3,6 +3,22 @@
 Indexers built with [SubQuery](https://subquery.network/) to support [DAO
 DAO](https://daodao.zone/) frontend and API needs.
 
+## Setup
+
+1. Install the latest stable yarn: https://yarnpkg.com/getting-started/install
+
+2. Copy `.yarnrc.yml.example` into `.yarnrc.yml`. Do not change anything.
+
+3. Add workspaces plugin:
+```
+yarn plugin import workspace-tools
+```
+
+4. Run yarn
+```
+yarn
+```
+
 ## Containerify
 
 Easily build yml files for deploying a [SubQuery](https://subquery.network/)
