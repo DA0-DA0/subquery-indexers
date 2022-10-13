@@ -17,18 +17,21 @@ schema:
 
 network:
   chainId: juno-1
+  # chainId: uni-5 # testnet
   # This endpoint must be a public non-pruned archive node
   # Public nodes may be rate limited, which can affect indexing speed
   # When developing your project we suggest getting a private API key
   # You can get them from OnFinality for free https://app.onfinality.io
   # https://documentation.onfinality.io/support/the-enhanced-api-service
   endpoint: https://rpc.juno.pupmos.network:443/
+  # endpoint: https://rpc.uni.juno.deuslabs.fi:443/ # testnet
   # Optionally provide the HTTP endpoint of a full chain dictionary to speed up processing
   dictionary: https://api.subquery.network/sq/subquery/cosmos-juno-dictionary
 
 dataSources:
   - kind: cosmos/Runtime
     startBlock: 4136532 # pupmos first block
+    # startBlock: 1 # testnet
     mapping:
       file: "./dist/index.js"
       handlers:
