@@ -2,6 +2,9 @@
 # Add the `@index` or `@index(unique: true)` annotation after any non-key field
 # https://academy.subquery.network/build/graphql.html#indexing-by-non-primary-key-field
 
+# TODO: Track SubDAO additions via executions (not deriving from parentDao
+# below, because any DAO can set any DAO as its parent, and we want to only
+# capture the true SubDAOs set by the parent.)
 type Dao @entity {
   id: ID! # cw-core address
   name: String! @index
