@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# Stop if running
+docker kill nginx
+docker rm nginx
+
 # Load image
 docker load -i subql-indexers-nginx.tar
 
