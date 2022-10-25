@@ -10,6 +10,7 @@ type Proposal @entity {
   open: Boolean!
   proposer: Wallet!
   createdAt: Date! @index
+  completedAt: Date @index
   executedAt: Date @index
   closedAt: Date @index
   expiresAtDate: Date @index

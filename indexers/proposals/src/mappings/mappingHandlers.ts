@@ -121,6 +121,10 @@ const updateOrCreateAndGetProposal = async (
   // Update proposal open status if necessary.
   if (proposal.open !== shouldBeOpen) {
     proposal.open = shouldBeOpen
+    // If no longer open, store completion timestamp.
+    if (!shouldBeOpen) {
+      proposal.completedAt = blockDate
+    }
     await proposal.save()
   }
 
