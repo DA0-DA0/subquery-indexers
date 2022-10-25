@@ -258,6 +258,13 @@ export async function handleUpdateConfig(
     return
   }
 
+  if (!config) {
+    logger.error(
+      `----- ${contract} ==> DAO config object empty during update_config`
+    )
+    return
+  }
+
   // Only update DAO if its info was most recently updated before this block.
   // This may happen if a parent DAO was instantiated before the indexer's first
   // block but was added to this indexer as a result of one of its subDAOs'
