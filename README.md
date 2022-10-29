@@ -10,11 +10,13 @@ DAO](https://daodao.zone/) frontend and API needs.
 2. Copy `.yarnrc.yml.example` into `.yarnrc.yml`. Do not change anything.
 
 3. Add workspaces plugin:
+
 ```
 yarn plugin import workspace-tools
 ```
 
 4. Run yarn
+
 ```
 yarn
 ```
@@ -40,10 +42,34 @@ yarn containerify <indexer folder> <indexer port>
 
 It will output one file in the specified indexer folder:
 
-### docker-compose.deploy_*\<indexer folder\>*_\<timestamp\>.yml
+### docker-compose.deploy**\<indexer folder\>**\<timestamp\>.yml
 
 Run it with:
 
 ```sh
 docker compose -f <docker compose yml> up
 ```
+
+## Relevant chain variables
+
+### Second fork
+
+RPC: `https://rpc-v3-archive.junonetwork.io/`
+
+Start block height: `2578099`
+
+End block height: `4136530`
+
+### Current fork
+
+RPC: `https://rpc-archive.junonetwork.io/`
+
+Start block height: `4136532`
+
+### First v1 cw-core on mainnet
+
+Code ID: `428`
+
+Block Height: `3642048`
+
+Timestamp: `2022-06-22T19:51:16.12133876Z`
