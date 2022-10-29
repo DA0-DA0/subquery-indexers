@@ -41,7 +41,6 @@ interface InstantiateContractWithSelfAdmin {
 }
 
 interface InstantiateMsg extends Config {
-  // v2
   admin?: string | null
 }
 
@@ -140,6 +139,79 @@ const getOrCreateDao = async (
 }
 
 export async function handleInstantiate(
+  cosmosMessage: CosmosMessage<DecodedMsg<InstantiateMsg>>
+): Promise<void> {
+  const {
+    block: {
+      block: { header },
+    },
+    msg: {
+      decodedMsg: { msg: instantiateMsg },
+    },
+    tx: {
+      hash,
+      tx: { log },
+    },
+  } = cosmosMessage
+
+  let coreAddress: string
+  try {
+    coreAddress = findAttribute(
+      JSON.parse(log),
+      'instantiate',
+      '_contract_address'
+    ).value
+    if (!coreAddress) {
+      throw new Error(`coreAddress (${JSON.stringify(coreAddress)}) empty`)
+    }
+  } catch (err) {
+    logger.error(
+      `----- ${hash} ==> Error retrieving coreAddress during instantiate: ${
+        err instanceof Error ? err.message : `${err}`
+      }`
+    )
+    return
+  }
+
+  if (!('name' in instantiateMsg) || !('description' in instantiateMsg)) {
+    throw new Error(
+      `instantiate msg ${JSON.stringify(
+        instantiateMsg
+      )} does not look like a DAO DAO instantiate msg`
+    )
+  }
+
+  // It should never exist at this point if we index in order of old to new
+  // block height, but why not be safe. If it does happen to exist, update its
+  // created timestamp since this is its instantiation.
+  let dao = await Dao.get(coreAddress)
+  if (dao) {
+    dao.created = new Date(header.time)
+  } else if (!dao) {
+    dao = Dao.create({
+      id: coreAddress,
+      name: instantiateMsg.name,
+      description: instantiateMsg.description,
+      imageUrl: instantiateMsg.image_url ?? undefined,
+      created: new Date(header.time),
+      daoUri: instantiateMsg.dao_uri ?? undefined,
+      infoUpdatedAt: new Date(header.time),
+      infoUpdatedHeight: BigInt(header.height),
+    })
+
+    // Create parent DAO if doesn't exist.
+    if (instantiateMsg.admin && (await getOrCreateDao(instantiateMsg.admin))) {
+      dao.parentDaoId = instantiateMsg.admin
+      dao.parentDaoUpdatedAt = new Date(header.time)
+      dao.parentDaoUpdatedHeight = BigInt(header.height)
+    }
+  }
+  await dao.save()
+
+  logger.info(`----- ${coreAddress} ==> Instantiated`)
+}
+
+export async function handleInstantiateFactory(
   cosmosMessage: CosmosMessage<DecodedMsg<InstantiateContractWithSelfAdmin>>
 ): Promise<void> {
   const {
