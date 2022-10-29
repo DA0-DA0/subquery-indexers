@@ -20,7 +20,7 @@ network:
   # chainId: uni-5 # testnet
 
   endpoint: https://rpc-v3-archive.junonetwork.io/ # mainnet 2578099 to 4136530
-  # endpoint: https://rpc-archive.junonetwork.io/ # mainnet 4136532 to latest
+  # endpoint: https://rpc-archive.junonetwork.io/ # mainnet 4136532 to current
   # endpoint: https://rpc.uni.juno.deuslabs.fi:443/ # testnet
 
   # Optionally provide the HTTP endpoint of a full chain dictionary to speed up processing
