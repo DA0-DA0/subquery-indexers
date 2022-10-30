@@ -2,6 +2,7 @@ import { BlockHeader } from '@cosmjs/stargate'
 import { findAttribute } from '@cosmjs/stargate/build/logs'
 import { CosmosMessage } from '@subql/types-cosmos'
 
+import { objectMatchesStructure } from '../objectMatchesStructure'
 import { Dao } from '../types'
 
 interface DecodedMsg<T extends any = any> {
@@ -19,6 +20,8 @@ interface Config {
   name: string
   description: string
   image_url?: string | null
+  automatically_add_cw20s: boolean
+  automatically_add_cw721s: boolean
   // v2
   dao_uri?: string | null
 }
@@ -66,18 +69,19 @@ const dumpStateWithBlock = async (
     dumpedState = await api.queryContractSmart(coreAddress, {
       dump_state: {},
     })
-    // v1 and v2 both contain `config`
+    // v1 and v2 both contain `config` and all these fields.
     if (
-      !dumpedState ||
-      !('config' in dumpedState) ||
-      !dumpedState.config ||
-      !('name' in dumpedState.config) ||
-      !('description' in dumpedState.config)
+      !objectMatchesStructure(dumpedState, {
+        config: {
+          name: {},
+          description: {},
+          automatically_add_cw20s: {},
+          automatically_add_cw721s: {},
+        },
+      })
     ) {
       throw new Error(
-        `dumped state ${JSON.stringify(
-          dumpedState
-        )} does not look like a cw-core dump state response`
+        `dumped state response ${JSON.stringify(dumpedState)} not recognized`
       )
     }
 
@@ -133,6 +137,8 @@ const getOrCreateDao = async (
       dao.parentDaoUpdatedAt = new Date(header.time)
       dao.parentDaoUpdatedHeight = BigInt(header.height)
     }
+
+    await dao.save()
   }
 
   return dao
@@ -154,6 +160,19 @@ export async function handleInstantiate(
     },
   } = cosmosMessage
 
+  // v1 and v2 both contain all these fields. If structure does not match, fail
+  // silently.
+  if (
+    !objectMatchesStructure(instantiateMsg, {
+      name: {},
+      description: {},
+      automatically_add_cw20s: {},
+      automatically_add_cw721s: {},
+    })
+  ) {
+    return
+  }
+
   let coreAddress: string
   try {
     coreAddress = findAttribute(
@@ -171,14 +190,6 @@ export async function handleInstantiate(
       }`
     )
     return
-  }
-
-  if (!('name' in instantiateMsg) || !('description' in instantiateMsg)) {
-    throw new Error(
-      `instantiate msg ${JSON.stringify(
-        instantiateMsg
-      )} does not look like a DAO DAO instantiate msg`
-    )
   }
 
   // It should never exist at this point if we index in order of old to new
@@ -231,6 +242,32 @@ export async function handleInstantiateFactory(
     },
   } = cosmosMessage
 
+  let instantiateMsg: InstantiateMsg
+  try {
+    instantiateMsg = JSON.parse(
+      Buffer.from(instantiate_msg, 'base64').toString('ascii')
+    )
+    // v1 and v2 both contain all these fields. If structure does not match,
+    // fail silently.
+    if (
+      !objectMatchesStructure(instantiateMsg, {
+        name: {},
+        description: {},
+        automatically_add_cw20s: {},
+        automatically_add_cw721s: {},
+      })
+    ) {
+      return
+    }
+  } catch (err) {
+    logger.error(
+      `----- ${contract} ==> Error parsing instantiate_msg in factory: ${
+        err instanceof Error ? err.message : `${err}`
+      }`
+    )
+    return
+  }
+
   let coreAddress: string
   try {
     coreAddress = findAttribute(
@@ -244,31 +281,6 @@ export async function handleInstantiateFactory(
   } catch (err) {
     logger.error(
       `----- ${contract} ==> Error retrieving coreAddress during instantiate: ${
-        err instanceof Error ? err.message : `${err}`
-      }`
-    )
-    return
-  }
-
-  let instantiateMsg: InstantiateMsg
-  try {
-    instantiateMsg = JSON.parse(
-      Buffer.from(instantiate_msg, 'base64').toString('ascii')
-    )
-    if (
-      !instantiateMsg ||
-      !('name' in instantiateMsg) ||
-      !('description' in instantiateMsg)
-    ) {
-      throw new Error(
-        `instantiate msg ${JSON.stringify(
-          instantiateMsg
-        )} does not look like a cw-core instantiate msg`
-      )
-    }
-  } catch (err) {
-    logger.error(
-      `----- ${contract} ==> Error parsing instantiate_msg for core (${coreAddress}) in factory: ${
         err instanceof Error ? err.message : `${err}`
       }`
     )
@@ -322,17 +334,23 @@ export async function handleUpdateConfig(
     },
   } = cosmosMessage
 
+  // v1 and v2 both contain all these fields. If structure does not match, fail
+  // silently.
+  if (
+    !objectMatchesStructure(config, {
+      name: {},
+      description: {},
+      automatically_add_cw20s: {},
+      automatically_add_cw721s: {},
+    })
+  ) {
+    return
+  }
+
   const dao = await getOrCreateDao(contract)
   if (!dao) {
     logger.error(
       `----- ${contract} ==> Error creating DAO during update_config`
-    )
-    return
-  }
-
-  if (!config) {
-    logger.error(
-      `----- ${contract} ==> DAO config object empty during update_config`
     )
     return
   }
@@ -354,7 +372,7 @@ export async function handleUpdateConfig(
     logger.info(`----- ${contract} ==> Updated config`)
   } else {
     logger.error(
-      `----- ${contract} ==> Info already newer during update_config`
+      `----- ${contract} ==> Info already newer during update_config (${dao.infoUpdatedHeight} >= ${header.height})`
     )
   }
 }
@@ -374,11 +392,27 @@ export async function handleUpdateAdmin(
     },
   } = cosmosMessage
 
+  let newAdmin: string
+  try {
+    newAdmin = findAttribute(JSON.parse(log), 'wasm', 'new_admin').value
+    if (!newAdmin) {
+      throw new Error(`newAdmin (${JSON.stringify(newAdmin)}) empty`)
+    }
+  } catch (err) {
+    logger.error(
+      `----- ${contract} ==> Error retrieving newAdmin: ${
+        err instanceof Error ? err.message : `${err}`
+      }`
+    )
+    return
+  }
+
   const dao = await getOrCreateDao(contract)
   if (!dao) {
     logger.error(`----- ${contract} ==> Error creating DAO during update_admin`)
     return
   }
+
   // Only update DAO admin if its admin was most recently updated before this
   // block. This may happen if a parent DAO was instantiated with an admin
   // before the indexer's first block but was added to this indexer as a result
@@ -389,22 +423,7 @@ export async function handleUpdateAdmin(
     dao.parentDaoUpdatedHeight >= header.height
   ) {
     logger.error(
-      `----- ${contract} ==> Parent DAO already newer during update_admin`
-    )
-    return
-  }
-
-  let newAdmin: string
-  try {
-    newAdmin = findAttribute(JSON.parse(log), 'wasm', 'new_admin').value
-    if (!newAdmin) {
-      throw new Error(`newAdmin (${JSON.stringify(newAdmin)}) empty`)
-    }
-  } catch (err) {
-    logger.error(
-      `Error retrieving newAdmin for ${contract}: ${
-        err instanceof Error ? err.message : `${err}`
-      }`
+      `----- ${contract} ==> Parent DAO already newer during update_admin (${dao.parentDaoUpdatedHeight} >= ${header.height})`
     )
     return
   }
