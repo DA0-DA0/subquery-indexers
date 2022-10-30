@@ -12,3 +12,4 @@ ssl
 .env
 akash.deploy_*.yml
 docker-compose.deploy_*.yml
+project_*.yaml

@@ -7,10 +7,25 @@ import * as dotenv from 'dotenv'
 import { Blob, NFTStorage } from 'nft.storage'
 import { renderFile } from 'template-file'
 
-const spawn = async (cmd: string) =>
+interface ContainerVersion {
+  port: string
+  chainId: string
+  rpc: string
+  startBlock: string
+  label: string
+  backupSuffix: string
+}
+
+interface Config {
+  versions: ContainerVersion[]
+}
+
+const CONFIG_FILENAME = 'containerify.json'
+
+const spawnArgs = async (cmd: string[]) =>
   new Promise<boolean>((resolve) => {
-    console.log('> ' + cmd)
-    const spawned = _spawn(cmd.split(' ')[0], cmd.split(' ').slice(1))
+    console.log('> ' + cmd.join(' '))
+    const spawned = _spawn(cmd[0], cmd.slice(1))
 
     spawned.stdout.on('data', (data) => {
       process.stdout.write(data)
@@ -26,6 +41,8 @@ const spawn = async (cmd: string) =>
     })
   })
 
+const spawn = async (cmd: string) => spawnArgs(cmd.split(' '))
+
 const CHARS =
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@$%^&*()-_+[]{};:,.<>'
 const randomPassword = (length = 32) =>
@@ -34,8 +51,8 @@ const randomPassword = (length = 32) =>
     .join('')
 
 const main = async () => {
-  if (process.argv.length !== 4) {
-    throw new Error('SYNTAX: yarn containerify <indexer folder> <indexer port>')
+  if (process.argv.length !== 3) {
+    throw new Error('SYNTAX: yarn containerify <indexer folder>')
   }
 
   // const akashDeployTemplate = path.join(
@@ -97,9 +114,20 @@ const main = async () => {
   if (!fs.existsSync(indexerPath)) {
     throw new Error(`${indexerPath} not found.`)
   }
-  const indexerPort = process.argv[3]
-  // Switch current working directory to indexer path so we can execute scripts cleanly.
+  // Switch current working directory to indexer path so we can execute scripts
+  // cleanly.
   process.chdir(indexerPath)
+
+  if (!fs.existsSync(CONFIG_FILENAME)) {
+    throw new Error(`Config not found (${CONFIG_FILENAME}).`)
+  }
+
+  const config = JSON.parse(
+    fs.readFileSync(CONFIG_FILENAME).toString('utf8')
+  ) as Config
+  if (!config || !config.versions) {
+    throw new Error('Invalid config. Expected versions to exist.')
+  }
 
   // Install.
   if (!(await spawn('yarn'))) {
@@ -122,79 +150,109 @@ const main = async () => {
     throw new Error('Failed to build.')
   }
 
-  // Zip.
-  console.log('Uploading build...')
+  for (const version of config.versions) {
+    // Build project.yaml for version.
+    const versionedProjectYml = `project_${version.label}.yaml`
+    await spawn(`cp project.yaml ${versionedProjectYml}`)
+    // Set chainId.
+    await spawnArgs([
+      'npx',
+      'replace-in-files',
+      "--regex='  chainId:.+'",
+      `--replacement='  chainId: ${version.chainId}'`,
+      versionedProjectYml,
+    ])
+    // Set RPC endpoint.
+    await spawnArgs([
+      'npx',
+      'replace-in-files',
+      "--regex='  endpoint:.+'",
+      `--replacement='  endpoint: ${version.rpc}'`,
+      versionedProjectYml,
+    ])
+    // Set startBlock.
+    await spawnArgs([
+      'npx',
+      'replace-in-files',
+      "--regex='    startBlock:.+'",
+      `--replacement='    startBlock: ${version.startBlock}'`,
+      versionedProjectYml,
+    ])
 
-  const zip = new AdmZip()
-  zip.addLocalFolder('dist', 'dist')
-  zip.addLocalFile('schema.graphql')
-  zip.addLocalFile('project.yaml')
-  const zipBuffer = zip.toBuffer()
+    // Zip.
+    console.log(`Uploading build of version ${version.label}...`)
 
-  // Upload zip to IPFS.
-  const nftStorage = new NFTStorage({ token: NFT_STORAGE_API_KEY })
-  const cid = await nftStorage.storeBlob(new Blob([zipBuffer]))
-  console.log(`Uploaded to IPFS with CID ${cid}`)
+    const zip = new AdmZip()
+    zip.addLocalFolder('dist', 'dist')
+    zip.addLocalFile('schema.graphql')
+    zip.addLocalFile(versionedProjectYml, '', 'project.yaml')
+    const zipBuffer = zip.toBuffer()
 
-  // Generate deploy yml files.
-  const dbPassword = randomPassword()
-  const zipUrl = IPFS_HTTPS_URL_TEMPLATE.replace('{{cid}}', cid)
-  // const acceptHost = indexer + ACCEPT_HOST_SUFFIX
+    // Upload zip to IPFS.
+    const nftStorage = new NFTStorage({ token: NFT_STORAGE_API_KEY })
+    const cid = await nftStorage.storeBlob(new Blob([zipBuffer]))
+    console.log(`Uploaded to IPFS with CID ${cid}`)
 
-  // const akashDeployContent = await renderFile(akashDeployTemplate, {
-  //   dbPassword,
-  //   zipUrl,
-  //   acceptHost,
-  //   backup: {
-  //     bucket: BACKUP_BUCKET,
-  //     folder: indexer,
-  //     key: BACKUP_KEY,
-  //     secret: BACKUP_SECRET,
-  //     encryptionPassphrase: BACKUP_ENCRYPTION_PASSPHRASE,
-  //     host: BACKUP_HOST,
-  //     schedule: BACKUP_SCHEDULE,
-  //     retain: BACKUP_RETAIN,
-  //   },
-  // })
+    // Generate deploy yml files.
+    const dbPassword = randomPassword()
+    const zipUrl = IPFS_HTTPS_URL_TEMPLATE.replace('{{cid}}', cid)
+    // const acceptHost = indexer + ACCEPT_HOST_SUFFIX
 
-  const now = Date.now()
+    // const akashDeployContent = await renderFile(akashDeployTemplate, {
+    //   dbPassword,
+    //   zipUrl,
+    //   acceptHost,
+    //   backup: {
+    //     bucket: BACKUP_BUCKET,
+    //     folder: indexer,
+    //     key: BACKUP_KEY,
+    //     secret: BACKUP_SECRET,
+    //     encryptionPassphrase: BACKUP_ENCRYPTION_PASSPHRASE,
+    //     host: BACKUP_HOST,
+    //     schedule: BACKUP_SCHEDULE,
+    //     retain: BACKUP_RETAIN,
+    //   },
+    // })
 
-  // const akashDeployPath = path.join(
-  //   indexerPath,
-  //   `akash.deploy_${indexer}_${now}.yml`
-  // )
-  // fs.writeFileSync(akashDeployPath, akashDeployContent)
-  // console.log(`Saved ${akashDeployPath}`)
+    const now = Date.now()
 
-  const dockerComposeDeployContent = (
-    await renderFile(dockerComposeDeployTemplate, {
-      dbPassword,
-      zipUrl,
-      port: indexerPort,
-      backup: {
-        bucket: BACKUP_BUCKET,
-        folder: indexer,
-        key: BACKUP_KEY,
-        secret: BACKUP_SECRET,
-        encryptionPassphrase: BACKUP_ENCRYPTION_PASSPHRASE,
-        host: BACKUP_HOST,
-        schedule: BACKUP_SCHEDULE,
-        retain: BACKUP_RETAIN,
-      },
-    })
-  )
-    // Escape dollar signs since docker compose yml files use it for variable
-    // substitution by replacing each single dollar sign with two dollar signs.
-    // Also double dollar sign is a special pattern in the JS string replace
-    // function that inserts a single dollar sign, so we need to use four dollar
-    // signs here to make two. Jeez.
-    .replace(/\$/g, '$$$$')
-  const dockerComposeDeployPath = path.join(
-    indexerPath,
-    `docker-compose.deploy_${indexer}_${now}.yml`
-  )
-  fs.writeFileSync(dockerComposeDeployPath, dockerComposeDeployContent)
-  console.log(`Saved ${dockerComposeDeployPath}`)
+    // const akashDeployPath = path.join(
+    //   indexerPath,
+    //   `akash.deploy_${indexer}_${now}.yml`
+    // )
+    // fs.writeFileSync(akashDeployPath, akashDeployContent)
+    // console.log(`Saved ${akashDeployPath}`)
+
+    const dockerComposeDeployContent = (
+      await renderFile(dockerComposeDeployTemplate, {
+        dbPassword,
+        zipUrl,
+        port: version.port,
+        backup: {
+          bucket: BACKUP_BUCKET,
+          folder: indexer + version.backupSuffix,
+          key: BACKUP_KEY,
+          secret: BACKUP_SECRET,
+          encryptionPassphrase: BACKUP_ENCRYPTION_PASSPHRASE,
+          host: BACKUP_HOST,
+          schedule: BACKUP_SCHEDULE,
+          retain: BACKUP_RETAIN,
+        },
+      })
+    )
+      // Escape dollar signs since docker compose yml files use it for variable
+      // substitution by replacing each single dollar sign with two dollar signs.
+      // Also double dollar sign is a special pattern in the JS string replace
+      // function that inserts a single dollar sign, so we need to use four dollar
+      // signs here to make two. Jeez.
+      .replace(/\$/g, '$$$$')
+    const dockerComposeDeployPath = path.join(
+      indexerPath,
+      `docker-compose.deploy_${indexer}_${version.label}_${now}.yml`
+    )
+    fs.writeFileSync(dockerComposeDeployPath, dockerComposeDeployContent)
+    console.log(`Saved ${dockerComposeDeployPath}`)
+  }
 }
 
 main().catch((err) => {

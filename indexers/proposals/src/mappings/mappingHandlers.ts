@@ -1,8 +1,8 @@
 import { Event } from '@cosmjs/stargate/build/logs'
 import { CosmosMessage } from '@subql/types-cosmos'
 
+import { objectMatchesStructure } from '../objectMatchesStructure'
 import { Proposal, ProposalModule, ProposalVote, Wallet } from '../types'
-import { objectKeyLayoutMatchesSchema } from './utils'
 
 interface DecodedMsg<T extends any = any> {
   sender: string
@@ -45,7 +45,8 @@ const updateOrCreateAndGetProposal = async (
   proposalModuleAddress: string,
   proposalNumber: number,
   shouldBeOpen: boolean,
-  blockDate: Date
+  blockDate: Date,
+  proposer: string | undefined
 ): Promise<Proposal | undefined> => {
   let proposal = await Proposal.get(
     getProposalId(proposalModuleAddress, proposalNumber)
@@ -56,24 +57,19 @@ const updateOrCreateAndGetProposal = async (
     // Make proposal module if necessary.
     await ensureProposalModuleExists(proposalModuleAddress)
 
-    // Get proposal expiration.
+    // Get proposal proposer and expiration.
     let expiresAtDate: Date | undefined
     let expiresAtHeight: number | undefined
-    let proposer: string
     try {
       const response = await api.queryContractSmart(proposalModuleAddress, {
         proposal: { proposal_id: proposalNumber },
       })
       // cw-proposal-single and cw-proposal-multiple supported
       if (
-        !objectKeyLayoutMatchesSchema(response, {
-          _: {
-            proposal: {
-              _: {
-                expiration: {},
-                proposer: {},
-              },
-            },
+        !objectMatchesStructure(response, {
+          proposal: {
+            expiration: {},
+            proposer: {},
           },
         })
       ) {
@@ -81,6 +77,8 @@ const updateOrCreateAndGetProposal = async (
           `invalid proposal response: ${JSON.stringify(response)}`
         )
       }
+
+      proposer = response.proposal.proposer
 
       const expiration = response.proposal.expiration as Expiration
       expiresAtDate =
@@ -90,27 +88,22 @@ const updateOrCreateAndGetProposal = async (
           : undefined
       expiresAtHeight =
         'at_height' in expiration ? expiration.at_height : undefined
-
-      proposer = response.proposal.proposer
     } catch (err) {
       logger.error(
-        `Error retrieving expiration for ${getProposalId(
+        `Error retrieving proposal info for ${getProposalId(
           proposalModuleAddress,
           proposalNumber
         )}: ${err instanceof Error ? err.message : `${err}`}`
       )
-      return
     }
-
-    // Make wallet if doesn't exist.
-    const proposerWallet = await getWallet(proposer)
 
     proposal = Proposal.create({
       id: getProposalId(proposalModuleAddress, proposalNumber),
       moduleId: proposalModuleAddress,
       num: proposalNumber,
       open: shouldBeOpen,
-      proposerId: proposerWallet.id,
+      // Make wallet if doesn't exist.
+      proposerId: proposer ? (await getWallet(proposer)).id : undefined,
       expiresAtDate,
       expiresAtHeight,
       createdAt: blockDate,
@@ -179,18 +172,18 @@ export async function handlePropose(
     msg: {
       decodedMsg: {
         contract,
+        sender,
         msg: { propose },
       },
     },
   } = cosmosMessage
 
-  // cw-proposal-single and cw-proposal-multiple supported
+  // cw-proposal-single and cw-proposal-multiple supported. Fail silently if
+  // structure not matched.
   if (
-    !objectKeyLayoutMatchesSchema(propose, {
-      _: {
-        title: {},
-        description: {},
-      },
+    !objectMatchesStructure(propose, {
+      title: {},
+      description: {},
     })
   ) {
     return
@@ -221,7 +214,8 @@ export async function handlePropose(
       contract,
       proposalNumber,
       true,
-      new Date(header.time)
+      new Date(header.time),
+      sender
     )
   ) {
     logger.info(`----- ${contract} > ${proposalNumber} ==> Proposed`)
@@ -248,14 +242,12 @@ export async function handleVote(
     },
   } = cosmosMessage
 
-  // cw-proposal-single and cw-proposal-multiple supported
+  // cw-proposal-single and cw-proposal-multiple supported. Fail silently if
+  // structure not matched.
   if (
-    !objectKeyLayoutMatchesSchema(vote, {
-      _: {
-        proposal_id: {},
-        vote: {},
-      },
-      exact: true,
+    !objectMatchesStructure(vote, {
+      proposal_id: {},
+      vote: {},
     })
   ) {
     return
@@ -286,7 +278,8 @@ export async function handleVote(
     contract,
     proposalNumber,
     proposalOpen,
-    new Date(header.time)
+    new Date(header.time),
+    undefined
   )
   if (!proposal) {
     logger.error(`----- ${contract} > ${proposalNumber} ==> Failed during vote`)
@@ -319,13 +312,11 @@ export async function handleExecute({
     },
   },
 }: CosmosMessage<DecodedMsg>): Promise<void> {
-  // cw-proposal-single and cw-proposal-multiple supported
+  // cw-proposal-single and cw-proposal-multiple supported. Fail silently if
+  // structure not matched.
   if (
-    !objectKeyLayoutMatchesSchema(execute, {
-      _: {
-        proposal_id: {},
-      },
-      exact: true,
+    !objectMatchesStructure(execute, {
+      proposal_id: {},
     })
   ) {
     return
@@ -358,13 +349,11 @@ export async function handleClose({
     },
   },
 }: CosmosMessage<DecodedMsg>): Promise<void> {
-  // cw-proposal-single and cw-proposal-multiple supported
+  // cw-proposal-single and cw-proposal-multiple supported. Fail silently if
+  // structure not matched.
   if (
-    !objectKeyLayoutMatchesSchema(close, {
-      _: {
-        proposal_id: {},
-      },
-      exact: true,
+    !objectMatchesStructure(close, {
+      proposal_id: {},
     })
   ) {
     return

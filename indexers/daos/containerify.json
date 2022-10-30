@@ -1,0 +1,29 @@
+{
+  "versions": [
+    {
+      "port": "3001",
+      "chainId": "juno-1",
+      "rpc": "https://rpc-v3-archive.junonetwork.io:443/",
+      "startBlock": "3642048",
+      "label": "3642048-4136530",
+      "backupSuffix": "_3642048-4136530"
+    },
+    {
+      "port": "3001",
+      "chainId": "juno-1",
+      "rpc": "https://rpc-archive.junonetwork.io:443/",
+      "startBlock": "4136532",
+      "label": "4136532-current",
+      "backupSuffix": ""
+    },
+
+    {
+      "port": "4001",
+      "chainId": "uni-5",
+      "rpc": "https://rpc.uni.juno.deuslabs.fi:443/",
+      "startBlock": "1",
+      "label": "testnet",
+      "backupSuffix": "_testnet"
+    }
+  ]
+}
