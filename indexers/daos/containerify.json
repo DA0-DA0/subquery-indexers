@@ -1,7 +1,7 @@
 {
   "versions": [
     {
-      "port": "3001",
+      "port": "3000",
       "chainId": "juno-1",
       "rpc": "https://rpc-v3-archive.junonetwork.io:443/",
       "startBlock": "3642048",
@@ -9,7 +9,7 @@
       "backupSuffix": "_3642048-4136530"
     },
     {
-      "port": "3001",
+      "port": "3000",
       "chainId": "juno-1",
       "rpc": "https://rpc-archive.junonetwork.io:443/",
       "startBlock": "4136532",
@@ -18,7 +18,7 @@
     },
 
     {
-      "port": "4001",
+      "port": "4000",
       "chainId": "uni-5",
       "rpc": "https://rpc.uni.juno.deuslabs.fi:443/",
       "startBlock": "1",
