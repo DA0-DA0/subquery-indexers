@@ -13,8 +13,6 @@ type Dao @entity {
   created: Date @index
   daoUri: String
   infoUpdatedAt: Date!
-  infoUpdatedHeight: BigInt!
   parentDao: Dao
   parentDaoUpdatedAt: Date
-  parentDaoUpdatedHeight: BigInt
 }
