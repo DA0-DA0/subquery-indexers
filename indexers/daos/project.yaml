@@ -34,8 +34,6 @@ dataSources:
     mapping:
       file: "./dist/index.js"
       handlers:
-        - handler: handleTransaction
-          kind: cosmos/TransactionHandler
         - handler: handleInstantiate
           kind: cosmos/MessageHandler
           filter:
@@ -45,3 +43,15 @@ dataSources:
           filter:
             type: "/cosmwasm.wasm.v1.MsgExecuteContract"
             contractCall: "instantiate_contract_with_self_admin"
+        - handler: handleUpdateConfigEvent
+          kind: cosmos/EventHandler
+          filter:
+            type: "wasm"
+            attributes:
+              action: "execute_update_config"
+        - handler: handleUpdateAdminEvent
+          kind: cosmos/EventHandler
+          filter:
+            type: "wasm"
+            attributes:
+              action: "execute_accept_admin_nomination"

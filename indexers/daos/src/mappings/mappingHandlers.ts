@@ -1,5 +1,5 @@
 import { findAttribute } from '@cosmjs/stargate/build/logs'
-import { CosmosMessage, CosmosTransaction } from '@subql/types-cosmos'
+import { CosmosEvent, CosmosMessage } from '@subql/types-cosmos'
 
 import { findMatchingWasmEventAndDecode } from '../findMatchingWasmEventAndDecode'
 import { objectMatchesStructure } from '../objectMatchesStructure'
@@ -291,27 +291,21 @@ export async function handleInstantiateFactory(
   logger.info(`----- ${coreAddress} ==> Instantiated (factory: ${contract})`)
 }
 
-// Listen for events in transaction events log to determine when to update
-// existing state from the chain. Most state updates to DAOs occur via executed
-// proposals (and thus smart contract submessages), and submessages only appear
-// in the chain as events.
-export async function handleTransaction(tx: CosmosTransaction): Promise<void> {
+// Listen for events in transaction events to determine when to update existing
+// state from the chain. Most state updates to DAOs occur via executed proposals
+// (and thus smart contract submessages), and submessages only appear in the
+// chain as events.
+
+export const handleUpdateConfigEvent = async ({ tx }: CosmosEvent) => {
   const updateConfigEvent = findMatchingWasmEventAndDecode(tx.tx.events, [
     { key: 'action', value: 'execute_update_config' },
   ])
-  if (updateConfigEvent?.contractAddress) {
-    return await updateConfig(updateConfigEvent.contractAddress)
+  if (!updateConfigEvent?.contractAddress) {
+    return
   }
 
-  const updateAdminEvent = findMatchingWasmEventAndDecode(tx.tx.events, [
-    { key: 'action', value: 'execute_accept_admin_nomination' },
-  ])
-  if (updateAdminEvent?.contractAddress) {
-    return await updateAdmin(updateAdminEvent.contractAddress)
-  }
-}
+  const coreAddress = updateConfigEvent.contractAddress
 
-export const updateConfig = async (coreAddress: string) => {
   // Ensure DAO exists.
   const dao = await Dao.get(coreAddress)
   if (!dao) {
@@ -341,7 +335,16 @@ export const updateConfig = async (coreAddress: string) => {
   logger.info(`----- ${coreAddress} ==> Updated config`)
 }
 
-export const updateAdmin = async (coreAddress: string) => {
+export const handleUpdateAdminEvent = async ({ tx }: CosmosEvent) => {
+  const updateAdminEvent = findMatchingWasmEventAndDecode(tx.tx.events, [
+    { key: 'action', value: 'execute_accept_admin_nomination' },
+  ])
+  if (!updateAdminEvent?.contractAddress) {
+    return
+  }
+
+  const coreAddress = updateAdminEvent.contractAddress
+
   // Ensure DAO exists.
   const dao = await Dao.get(coreAddress)
   if (!dao) {
