@@ -1,7 +1,7 @@
 import { findAttribute } from '@cosmjs/stargate/build/logs'
 import { CosmosEvent, CosmosMessage } from '@subql/types-cosmos'
 
-import { findMatchingWasmEventAndDecode } from '../findMatchingWasmEventAndDecode'
+import { findContractAddressesForActionEvent } from '../findContractAddressesForActionEvent'
 import { objectMatchesStructure } from '../objectMatchesStructure'
 import { Dao } from '../types'
 
@@ -297,79 +297,81 @@ export async function handleInstantiateFactory(
 // chain as events.
 
 export const handleUpdateConfigEvent = async ({ tx }: CosmosEvent) => {
-  const updateConfigEvent = findMatchingWasmEventAndDecode(tx.tx.events, [
-    { key: 'action', value: 'execute_update_config' },
-  ])
-  if (!updateConfigEvent?.contractAddress) {
+  const coreAddressesWithUpdatedConfig = findContractAddressesForActionEvent(
+    tx.tx.events,
+    'execute_update_config'
+  )
+  if (coreAddressesWithUpdatedConfig.length === 0) {
     return
   }
 
-  const coreAddress = updateConfigEvent.contractAddress
+  for (const coreAddress of coreAddressesWithUpdatedConfig) {
+    // Ensure DAO exists.
+    const dao = await Dao.get(coreAddress)
+    if (!dao) {
+      return
+    }
 
-  // Ensure DAO exists.
-  const dao = await Dao.get(coreAddress)
-  if (!dao) {
-    return
+    // Get latest state of DAO config. We can't get the state at an intermediary
+    // block, so just update to the latest state if we see an event.
+    const dumpedState = await dumpState(coreAddress)
+    if (!dumpedState) {
+      logger.error(
+        `----- ${coreAddress} ==> Failed to dump state when updating config`
+      )
+      return
+    }
+
+    const { config } = dumpedState
+
+    dao.name = config.name
+    dao.description = config.description
+    dao.imageUrl = config.image_url ?? undefined
+    dao.daoUri = config.dao_uri ?? undefined
+    dao.infoUpdatedAt = new Date()
+
+    await dao.save()
+
+    logger.info(`----- ${coreAddress} ==> Updated config`)
   }
-
-  // Get latest state of DAO config. We can't get the state at an intermediary
-  // block, so just update to the latest state if we see an event.
-  const dumpedState = await dumpState(coreAddress)
-  if (!dumpedState) {
-    logger.error(
-      `----- ${coreAddress} ==> Failed to dump state when updating config`
-    )
-    return
-  }
-
-  const { config } = dumpedState
-
-  dao.name = config.name
-  dao.description = config.description
-  dao.imageUrl = config.image_url ?? undefined
-  dao.daoUri = config.dao_uri ?? undefined
-  dao.infoUpdatedAt = new Date()
-
-  await dao.save()
-
-  logger.info(`----- ${coreAddress} ==> Updated config`)
 }
 
 export const handleUpdateAdminEvent = async ({ tx }: CosmosEvent) => {
-  const updateAdminEvent = findMatchingWasmEventAndDecode(tx.tx.events, [
-    { key: 'action', value: 'execute_accept_admin_nomination' },
-  ])
-  if (!updateAdminEvent?.contractAddress) {
+  const coreAddressesWithUpdatedAdmin = findContractAddressesForActionEvent(
+    tx.tx.events,
+    'execute_accept_admin_nomination'
+  )
+  if (coreAddressesWithUpdatedAdmin.length === 0) {
     return
   }
 
-  const coreAddress = updateAdminEvent.contractAddress
+  for (const coreAddress of coreAddressesWithUpdatedAdmin) {
+    // Ensure DAO exists.
+    const dao = await Dao.get(coreAddress)
+    if (!dao) {
+      return
+    }
 
-  // Ensure DAO exists.
-  const dao = await Dao.get(coreAddress)
-  if (!dao) {
-    return
+    // Get latest state of DAO config. We can't get the state at an intermediary
+    // block, so just update to the latest state if we see an event.
+    const dumpedState = await dumpState(coreAddress)
+    if (!dumpedState) {
+      logger.error(
+        `----- ${coreAddress} ==> Failed to dump state when updating admin`
+      )
+      return
+    }
+
+    const { admin } = dumpedState
+
+    // Create parent DAO if doesn't exist. If not a DAO, fail silently.
+    if (await getOrCreateDao(admin)) {
+      dao.parentDaoId = admin
+      dao.parentDaoUpdatedAt = new Date()
+    }
+
+    await dao.save()
+
+    logger.info(`----- ${coreAddress} ==> Updated admin`)
   }
-
-  // Get latest state of DAO config. We can't get the state at an intermediary
-  // block, so just update to the latest state if we see an event.
-  const dumpedState = await dumpState(coreAddress)
-  if (!dumpedState) {
-    logger.error(
-      `----- ${coreAddress} ==> Failed to dump state when updating admin`
-    )
-    return
-  }
-
-  const { admin } = dumpedState
-
-  // Create parent DAO if doesn't exist. If not a DAO, fail silently.
-  if (await getOrCreateDao(admin)) {
-    dao.parentDaoId = admin
-    dao.parentDaoUpdatedAt = new Date()
-  }
-
-  await dao.save()
-
-  logger.info(`----- ${coreAddress} ==> Updated admin`)
 }
