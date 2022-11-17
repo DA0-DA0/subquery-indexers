@@ -293,11 +293,12 @@ export async function handleVote(
       walletId: wallet.id,
       proposalId: proposal.id,
       votedAt: blockDate,
+      vote: vote.vote || '',
     })
   ).save()
 
   logger.info(
-    `----- ${contract} > ${proposalNumber} > ${sender} ==> Voted (open: ${proposalOpen})`
+    `----- ${contract} > ${proposalNumber} > ${sender} ==> Voted (open: ${proposalOpen}, vote: ${vote.vote})`
   )
 }
 

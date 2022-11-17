@@ -27,4 +27,5 @@ type ProposalVote @entity {
   proposal: Proposal!
   wallet: Wallet!
   votedAt: Date!
+  vote: String!
 }
