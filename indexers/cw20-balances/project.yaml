@@ -1,0 +1,54 @@
+specVersion: 1.0.0
+name: cw20-balances
+version: 0.0.1
+runner:
+  node:
+    name: "@subql/node-cosmos"
+    version: ">=0.1.0"
+  query:
+    name: "@subql/query"
+    version: "*"
+description: >-
+  This project can be use as a starting point for developing 
+  your Cosmos (Juno) based SubQuery project
+repository: https://github.com/subquery/juno-subql-starter
+schema:
+  file: ./schema.graphql
+
+network:
+  chainId: juno-1
+  # This endpoint must be a public non-pruned archive node
+  # Public nodes may be rate limited, which can affect indexing speed
+  # When developing your project we suggest getting a private API key
+  # You can get them from OnFinality for free https://app.onfinality.io
+  # https://documentation.onfinality.io/support/the-enhanced-api-service
+  endpoint: https://rpc.juno.pupmos.network
+  # Optionally provide the HTTP endpoint of a full chain dictionary to speed up processing
+  dictionary: https://api.subquery.network/sq/subquery/cosmos-juno-dictionary
+
+dataSources:
+  - kind: cosmos/Runtime
+    startBlock: 4323753 # DAODAO DAO TRANSFER 84DEBFD305B769D952EEC029BE3F4F3FFD59F7DC9E782B2544683E10CDEC904C
+    #startBlock: 4323284 # DAODAO DAO SEND AND STAKE B98D144A5569FBC1EEFC1EF7712575243AABE441976EC6E3FF4D5C24D7BC41BF
+    #startBlock: 4598782 # DOG DAO MINT
+    # startBlock: 4323262 # ???
+    # startBlock: 4415041 # first block on the fourth iteration of juno
+    # startBlock: 1055000 # juno-1 moneta
+    # startBlock: 2578099 # takumi ???
+    # startBlock: 4136532 # phoenix
+    # startBlock: 4415041 # phoenix v2
+    #chainTypes: # This is a beta feature that allows support for any Cosmos chain by importing the correct protobuf messages
+    #  cosmos.slashing.v1beta1:
+    #    file: "./proto/cosmos/slashing/v1beta1/tx.proto"
+    #    messages:
+    #     - "MsgUnjail"
+    mapping:
+      file: "./dist/index.js"
+      handlers:
+        - handler: handleExecute
+          kind: cosmos/MessageHandler
+          filter:
+            type: "/cosmwasm.wasm.v1.MsgExecuteContract"
+
+        # contract: juno1pqht3pkhr5fpyre2tw3ltrzc0kvxknnsgt04thym9l7n2rmxgw0sgefues 
+        ## DAO cw20 contract

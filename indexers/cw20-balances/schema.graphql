@@ -1,0 +1,34 @@
+# To improve query performance, we strongly suggest adding indexes to any field that you plan to filter or sort by
+# Add the `@index` or `@index(unique: true)` annotation after any non-key field
+# https://academy.subquery.network/build/graphql.html#indexing-by-non-primary-key-field
+
+## Snapshot has both an id and a secondaryId. the secondary tracks all contractAddr:addr:blockHeight records in a block
+## the primary id is the unique identifier that has sequence in its id in the form of contractAddr:addr:blockHeight:sequence
+## sequence ensures each message in a tx is unique
+## TODO: need to decide if we should add txHash to the 2 ids
+type Snapshot @entity {
+    id: ID! # contractAddr:addr:blockheight:seq
+    secondaryId: String! @index # contractAddr:addr:blockHeight
+    contractAddr: String! @index
+    addr: String! @index
+    blockHeight: BigInt!
+    sequence: Int!
+    txHash: String!
+    amount: BigInt!
+    stakedAmount: BigInt!
+}
+
+# Stores balances per staking contract, per address.
+# TODO: check with zeke and noah if we want to whitelist contracts to be
+type Balance @entity {
+    id: ID! # contractAddr:addr
+    contractAddr: String! @index
+    addr: String! @index
+    amount: BigInt!
+    stakedAmount: BigInt!
+}
+
+type TotalBalance @entity {
+    id: ID! # contractAddr
+    amount: BigInt!
+}
